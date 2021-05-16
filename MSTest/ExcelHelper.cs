@@ -1,3 +1,4 @@
+using CommonLibrary;
 using DTO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -9,7 +10,7 @@ namespace MSTest
         [TestMethod]
         public void ExcelTest()
         {
-
+            CommonExcel.MiniExcelExport();
         }
     }
 }

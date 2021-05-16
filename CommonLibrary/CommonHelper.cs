@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -11,6 +12,15 @@ namespace CommonLibrary
 {
     public partial class CommonHelper
     {
+        /// <summary>
+        /// 获取测试数据DataTable
+        /// </summary>
+        /// <param name="count"></param>
+        /// <returns></returns>
+        public static DataTable GetTestDataTable(int count=10000) {
+            return CommonMethod.ListToDt(GetTestListDto(count));
+        }
+
     /// <summary>
     /// 获取测试数据
     /// </summary>
