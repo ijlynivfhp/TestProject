@@ -34,14 +34,14 @@ namespace MSTest
         /// <param name="TableName">表名</param>
         /// <param name="dt">要插入的数据</param>
         /// <returns></returns>
-        public static string BulkInsertTables(List<DataTable> insertTables)
+        public async static Task<string> BulkInsertTables(List<DataTable> insertTables)
         {
             string resStr = string.Empty;
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
                 SqlTransaction tran = conn.BeginTransaction();//开启事务
-                SqlBulkCopy sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran);
+                SqlBulkCopy sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
                 try
                 {
                     foreach (var item in insertTables)
@@ -52,7 +52,7 @@ namespace MSTest
                         {
                             sqlbulkcopy.ColumnMappings.Add(item.Columns[i].ColumnName, item.Columns[i].ColumnName);
                         }
-                        sqlbulkcopy.WriteToServer(item);
+                        await sqlbulkcopy.WriteToServerAsync(item);
                     }
                     tran.Commit();
                 }
@@ -93,7 +93,7 @@ namespace MSTest
             {
                 conn.Open();
                 SqlTransaction tran = conn.BeginTransaction();//开启事务
-                SqlBulkCopy sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran);
+                SqlBulkCopy sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
                 try
                 {
                     using (SqlCommand cmd = new SqlCommand("", conn, tran))
@@ -116,9 +116,6 @@ namespace MSTest
                             {
                                 sqlbulkcopy.ColumnMappings.Add(p, p);
                             });
-                            //bulkTable.TableFields.ForEach(o=> { 
-                            //    sqlbulkcopy.ColumnMappings.Add(o, o);
-                            //});
                             sqlbulkcopy.WriteToServer(o);
                         });
 
@@ -185,7 +182,7 @@ namespace MSTest
             {
                 conn.Open();
                 SqlTransaction tran = conn.BeginTransaction();//开启事务
-                SqlBulkCopy sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran);
+                SqlBulkCopy sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
                 try
                 {
                     using (SqlCommand cmd = new SqlCommand("", conn, tran))
@@ -198,7 +195,7 @@ namespace MSTest
                         });
                         cmd.CommandText = tempTablesInsertSql.ToString();
                         cmd.ExecuteNonQuery();
-                        
+
                         insertTables.ForEach(o =>
                         {
                             sqlbulkcopy.ColumnMappings.Clear();
@@ -215,9 +212,6 @@ namespace MSTest
                             {
                                 sqlbulkcopy.ColumnMappings.Add(p, p);
                             });
-                            //bulkTable.TableFields.ForEach(o=> { 
-                            //    sqlbulkcopy.ColumnMappings.Add(o, o);
-                            //});
                             sqlbulkcopy.WriteToServer(o);
                         });
 
@@ -551,7 +545,7 @@ namespace MSTest
         /// <typeparam name="T"></typeparam>
         /// <param name="list"></param>
         /// <param name="tableName"></param>
-        public static void BulkInsertList<T>(List<T> list, string tableName)
+        public async static Task BulkInsertList<T>(List<T> list, string tableName)
         {
             var dataTable = ConvertListToTable(list);
             ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.PerUserRoamingAndLocal);
@@ -563,7 +557,7 @@ namespace MSTest
                 }
                 bulkCopy.BulkCopyTimeout = 660;
                 bulkCopy.DestinationTableName = tableName;
-                bulkCopy.WriteToServer(dataTable);
+                await bulkCopy.WriteToServerAsync(dataTable);
             }
         }
 

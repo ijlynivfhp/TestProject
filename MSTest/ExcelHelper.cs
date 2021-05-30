@@ -20,13 +20,13 @@ namespace MSTest
         [TestMethod]
         public void DataInsert()
         {
-            var dataList = CommonHelper.GetTestListDto(10000);
-            var dataListTwo = CommonHelper.GetTestListDtoTwo(10000);
+            var dataList = CommonHelper.GetTestListDto(100000);
+            var dataListTwo = CommonHelper.GetTestListDtoTwo(100000);
             var table = SqlBulkCopyHelper.ListToTable(dataList, "BulkTest");
             var tableTwo = SqlBulkCopyHelper.ListToTable(dataListTwo, "BulkTestTwo");
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            SqlBulkCopyHelper.BulkInsertTables(new List<DataTable>() { table, tableTwo });
+            SqlBulkCopyHelper.BulkInsertTables(new List<DataTable>() { table, tableTwo }).Wait();
             sw.Stop();
             string bb = sw.Elapsed.TotalSeconds.ToString();
         }
@@ -54,8 +54,8 @@ namespace MSTest
         [TestMethod]
         public void DataEdit()
         {
-            var dataList = CommonHelper.GetTestListDto(10000);
-            var dataListTwo = CommonHelper.GetTestListDtoTwo(10000);
+            var dataList = CommonHelper.GetTestListDto(100000);
+            var dataListTwo = CommonHelper.GetTestListDtoTwo(100000);
             var table = SqlBulkCopyHelper.ListToTable(dataList, "BulkTest");
             var tableTwo = SqlBulkCopyHelper.ListToTable(dataListTwo, "BulkTestTwo");
 
@@ -63,11 +63,11 @@ namespace MSTest
             var tableTwoUpdate = SqlCoreHelper.ExecuteDataSetText("select top 10000 * from BulkTestTwo order by FieldU asc", null).Tables[0];
             foreach (DataRow item in tableUpdate.Rows)
             {
-                item["FieldD"] = "3333";
+                item["FieldD"] = "5555";
             }
             foreach (DataRow item in tableTwoUpdate.Rows)
             {
-                item["FieldD"] = "4444";
+                item["FieldD"] = "6666";
             }
             tableUpdate.TableName = "BulkTest";
             tableTwoUpdate.TableName = "BulkTestTwo";
