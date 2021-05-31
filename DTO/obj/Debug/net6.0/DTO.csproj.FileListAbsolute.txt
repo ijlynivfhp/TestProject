@@ -2,7 +2,6 @@ E:\Project\.NET\TestProject\DTO\bin\Debug\net6.0\DTO.deps.json
 E:\Project\.NET\TestProject\DTO\bin\Debug\net6.0\DTO.dll
 E:\Project\.NET\TestProject\DTO\bin\Debug\net6.0\ref\DTO.dll
 E:\Project\.NET\TestProject\DTO\bin\Debug\net6.0\DTO.pdb
-E:\Project\.NET\TestProject\DTO\obj\Debug\net6.0\DTO.csprojAssemblyReference.cache
 E:\Project\.NET\TestProject\DTO\obj\Debug\net6.0\DTO.GeneratedMSBuildEditorConfig.editorconfig
 E:\Project\.NET\TestProject\DTO\obj\Debug\net6.0\DTO.AssemblyInfoInputs.cache
 E:\Project\.NET\TestProject\DTO\obj\Debug\net6.0\DTO.AssemblyInfo.cs
@@ -10,15 +9,3 @@ E:\Project\.NET\TestProject\DTO\obj\Debug\net6.0\DTO.csproj.CoreCompileInputs.ca
 E:\Project\.NET\TestProject\DTO\obj\Debug\net6.0\DTO.dll
 E:\Project\.NET\TestProject\DTO\obj\Debug\net6.0\ref\DTO.dll
 E:\Project\.NET\TestProject\DTO\obj\Debug\net6.0\DTO.pdb
-E:\软件\TestProject\DTO\bin\Debug\net6.0\DTO.deps.json
-E:\软件\TestProject\DTO\bin\Debug\net6.0\DTO.dll
-E:\软件\TestProject\DTO\bin\Debug\net6.0\ref\DTO.dll
-E:\软件\TestProject\DTO\bin\Debug\net6.0\DTO.pdb
-E:\软件\TestProject\DTO\obj\Debug\net6.0\DTO.csproj.AssemblyReference.cache
-E:\软件\TestProject\DTO\obj\Debug\net6.0\DTO.GeneratedMSBuildEditorConfig.editorconfig
-E:\软件\TestProject\DTO\obj\Debug\net6.0\DTO.AssemblyInfoInputs.cache
-E:\软件\TestProject\DTO\obj\Debug\net6.0\DTO.AssemblyInfo.cs
-E:\软件\TestProject\DTO\obj\Debug\net6.0\DTO.csproj.CoreCompileInputs.cache
-E:\软件\TestProject\DTO\obj\Debug\net6.0\DTO.dll
-E:\软件\TestProject\DTO\obj\Debug\net6.0\ref\DTO.dll
-E:\软件\TestProject\DTO\obj\Debug\net6.0\DTO.pdb
