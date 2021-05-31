@@ -25,3 +25,4 @@ Web*.Config
 /UFX.SCM.OpenApi/.config
 *.pubxml
 *.user
+/.vs
