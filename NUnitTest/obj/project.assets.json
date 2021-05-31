@@ -4676,11 +4676,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "E:\\软件\\TestProject\\NUnitTest\\NUnitTest.csproj",
+      "projectUniqueName": "E:\\Project\\.NET\\TestProject\\NUnitTest\\NUnitTest.csproj",
       "projectName": "NUnitTest",
-      "projectPath": "E:\\软件\\TestProject\\NUnitTest\\NUnitTest.csproj",
+      "projectPath": "E:\\Project\\.NET\\TestProject\\NUnitTest\\NUnitTest.csproj",
       "packagesPath": "C:\\Users\\Administrator\\.nuget\\packages\\",
-      "outputPath": "E:\\软件\\TestProject\\NUnitTest\\obj\\",
+      "outputPath": "E:\\Project\\.NET\\TestProject\\NUnitTest\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
@@ -4745,7 +4745,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.100-preview.4.21255.9\\RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.100-preview.3.21202.5\\RuntimeIdentifierGraph.json"
       }
     }
   }

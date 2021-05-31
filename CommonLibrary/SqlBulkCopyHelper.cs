@@ -9,6 +9,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -89,6 +90,7 @@ namespace MSTest
             var tempTablesInsertSql = new StringBuilder();
             var tempTablesUpdateSql = new StringBuilder();
             var tempSql = new StringBuilder();
+            Func<DataTable, BulkTable, bool> func = (o, p) => o.TableName == p.TableName;
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
@@ -100,7 +102,7 @@ namespace MSTest
                     {
                         updateTables.ForEach(o =>
                         {
-                            var bulkTable = bulkTables.FirstOrDefault(p => p.TableName == o.TableName);
+                            var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
                             tempTablesInsertSql.AppendLine(string.Format(@"SELECT A.* into {0} from {1} A WHERE 1=2;", tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.TableName));
                             foreach (DataColumn item in o.Columns) bulkTable.TableFields.Add(item.ColumnName);
                         });
@@ -109,7 +111,7 @@ namespace MSTest
 
                         updateTables.ForEach(o =>
                         {
-                            var bulkTable = bulkTables.FirstOrDefault(p => p.TableName == o.TableName);
+                            var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
                             sqlbulkcopy.ColumnMappings.Clear();
                             sqlbulkcopy.DestinationTableName = tempTablePre + bulkTable.TableName + tempTableSuf;
                             bulkTable.TableFields.ForEach(p =>
@@ -122,7 +124,7 @@ namespace MSTest
                         updateTables.ForEach(o =>
                         {
                             tempSql = new StringBuilder();
-                            var bulkTable = bulkTables.FirstOrDefault(p => p.TableName == o.TableName);
+                            var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
                             if (bulkTable.UpdateFields.Count > 0)
                                 foreach (var column in bulkTable.UpdateFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
                             else
@@ -178,6 +180,7 @@ namespace MSTest
             var tempTablesInsertSql = new StringBuilder();
             var tempTablesUpdateSql = new StringBuilder();
             var tempSql = new StringBuilder();
+            Func<DataTable, BulkTable, bool> func = (o, p) => o.TableName == p.TableName;
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
@@ -189,7 +192,7 @@ namespace MSTest
                     {
                         updateTables.ForEach(o =>
                         {
-                            var bulkTable = bulkTables.FirstOrDefault(p => p.TableName == o.TableName);
+                            var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
                             tempTablesInsertSql.AppendLine(string.Format(@"SELECT A.* into {0} from {1} A WHERE 1=2;", tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.TableName));
                             foreach (DataColumn item in o.Columns) bulkTable.TableFields.Add(item.ColumnName);
                         });
@@ -205,7 +208,7 @@ namespace MSTest
                         });
                         updateTables.ForEach(o =>
                         {
-                            var bulkTable = bulkTables.FirstOrDefault(p => p.TableName == o.TableName);
+                            var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
                             sqlbulkcopy.ColumnMappings.Clear();
                             sqlbulkcopy.DestinationTableName = tempTablePre + bulkTable.TableName + tempTableSuf;
                             bulkTable.TableFields.ForEach(p =>
@@ -218,7 +221,7 @@ namespace MSTest
                         updateTables.ForEach(o =>
                         {
                             tempSql = new StringBuilder();
-                            var bulkTable = bulkTables.FirstOrDefault(p => p.TableName == o.TableName);
+                            var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
                             if (bulkTable.UpdateFields.Count > 0)
                                 foreach (var column in bulkTable.UpdateFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
                             else

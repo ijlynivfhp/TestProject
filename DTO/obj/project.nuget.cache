@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "JhSDVekaqeqBwnRa2eZsPggjpKJV9NLSG/AlyienMZGVZ7HzL0Qe++5buZGjD7rBtmvStBptXaTXbjomDNOQmA==",
+  "dgSpecHash": "Dwm61Wnr01EOdbFUYEUqvHujlIf/Krqw/yZzu8dBE0rM9wuu74NfJINI/HtMfRcD12OcjgcGk3vCZbhSMqo1Jw==",
   "success": true,
-  "projectFilePath": "E:\\软件\\TestProject\\DTO\\DTO.csproj",
+  "projectFilePath": "E:\\Project\\.NET\\TestProject\\DTO\\DTO.csproj",
   "expectedPackageFiles": [],
   "logs": []
 }

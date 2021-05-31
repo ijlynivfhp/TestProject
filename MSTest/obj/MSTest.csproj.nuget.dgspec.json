@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "E:\\软件\\TestProject\\MSTest\\MSTest.csproj": {}
+    "E:\\Project\\.NET\\TestProject\\MSTest\\MSTest.csproj": {}
   },
   "projects": {
-    "E:\\软件\\TestProject\\CommonLibrary\\CommonLibrary.csproj": {
+    "E:\\Project\\.NET\\TestProject\\CommonLibrary\\CommonLibrary.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "E:\\软件\\TestProject\\CommonLibrary\\CommonLibrary.csproj",
+        "projectUniqueName": "E:\\Project\\.NET\\TestProject\\CommonLibrary\\CommonLibrary.csproj",
         "projectName": "CommonLibrary",
-        "projectPath": "E:\\软件\\TestProject\\CommonLibrary\\CommonLibrary.csproj",
+        "projectPath": "E:\\Project\\.NET\\TestProject\\CommonLibrary\\CommonLibrary.csproj",
         "packagesPath": "C:\\Users\\Administrator\\.nuget\\packages\\",
-        "outputPath": "E:\\软件\\TestProject\\CommonLibrary\\obj\\",
+        "outputPath": "E:\\Project\\.NET\\TestProject\\CommonLibrary\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
@@ -32,8 +32,8 @@
           "net6.0": {
             "targetAlias": "net6.0",
             "projectReferences": {
-              "E:\\软件\\TestProject\\DTO\\DTO.csproj": {
-                "projectPath": "E:\\软件\\TestProject\\DTO\\DTO.csproj"
+              "E:\\Project\\.NET\\TestProject\\DTO\\DTO.csproj": {
+                "projectPath": "E:\\Project\\.NET\\TestProject\\DTO\\DTO.csproj"
               }
             }
           }
@@ -104,18 +104,18 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.100-preview.4.21255.9\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.100-preview.3.21202.5\\RuntimeIdentifierGraph.json"
         }
       }
     },
-    "E:\\软件\\TestProject\\DTO\\DTO.csproj": {
+    "E:\\Project\\.NET\\TestProject\\DTO\\DTO.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "E:\\软件\\TestProject\\DTO\\DTO.csproj",
+        "projectUniqueName": "E:\\Project\\.NET\\TestProject\\DTO\\DTO.csproj",
         "projectName": "DTO",
-        "projectPath": "E:\\软件\\TestProject\\DTO\\DTO.csproj",
+        "projectPath": "E:\\Project\\.NET\\TestProject\\DTO\\DTO.csproj",
         "packagesPath": "C:\\Users\\Administrator\\.nuget\\packages\\",
-        "outputPath": "E:\\软件\\TestProject\\DTO\\obj\\",
+        "outputPath": "E:\\Project\\.NET\\TestProject\\DTO\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
@@ -162,18 +162,18 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.100-preview.4.21255.9\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.100-preview.3.21202.5\\RuntimeIdentifierGraph.json"
         }
       }
     },
-    "E:\\软件\\TestProject\\MSTest\\MSTest.csproj": {
+    "E:\\Project\\.NET\\TestProject\\MSTest\\MSTest.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "E:\\软件\\TestProject\\MSTest\\MSTest.csproj",
+        "projectUniqueName": "E:\\Project\\.NET\\TestProject\\MSTest\\MSTest.csproj",
         "projectName": "MSTest",
-        "projectPath": "E:\\软件\\TestProject\\MSTest\\MSTest.csproj",
+        "projectPath": "E:\\Project\\.NET\\TestProject\\MSTest\\MSTest.csproj",
         "packagesPath": "C:\\Users\\Administrator\\.nuget\\packages\\",
-        "outputPath": "E:\\软件\\TestProject\\MSTest\\obj\\",
+        "outputPath": "E:\\Project\\.NET\\TestProject\\MSTest\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
@@ -194,8 +194,8 @@
           "net6.0": {
             "targetAlias": "net6.0",
             "projectReferences": {
-              "E:\\软件\\TestProject\\CommonLibrary\\CommonLibrary.csproj": {
-                "projectPath": "E:\\软件\\TestProject\\CommonLibrary\\CommonLibrary.csproj"
+              "E:\\Project\\.NET\\TestProject\\CommonLibrary\\CommonLibrary.csproj": {
+                "projectPath": "E:\\Project\\.NET\\TestProject\\CommonLibrary\\CommonLibrary.csproj"
               }
             }
           }
@@ -248,7 +248,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.100-preview.4.21255.9\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.100-preview.3.21202.5\\RuntimeIdentifierGraph.json"
         }
       }
     }
