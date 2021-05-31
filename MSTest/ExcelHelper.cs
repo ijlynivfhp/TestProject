@@ -5,6 +5,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
+using System;
 
 namespace MSTest
 {
@@ -29,6 +30,7 @@ namespace MSTest
             SqlBulkCopyHelper.BulkInsertTables(new List<DataTable>() { table, tableTwo }).Wait();
             sw.Stop();
             string bb = sw.Elapsed.TotalSeconds.ToString();
+            Console.WriteLine(bb);
         }
         [TestMethod]
         public void DataUpdate()
@@ -50,6 +52,7 @@ namespace MSTest
             SqlBulkCopyHelper.BulkUpdateTables(new List<BulkTable>() { new BulkTable() { Table = table }, new BulkTable() { Table = tableTwo } });
             sw.Stop();
             string bb = sw.Elapsed.TotalSeconds.ToString();
+            Console.WriteLine(bb);
         }
         [TestMethod]
         public void DataEdit()
@@ -76,6 +79,7 @@ namespace MSTest
             SqlBulkCopyHelper.BulkEditTables(new List<DataTable>() { table, tableTwo }, new List<BulkTable>() { new BulkTable() { Table = tableUpdate }, new BulkTable() { Table = tableTwoUpdate } });
             sw.Stop();
             string bb = sw.Elapsed.TotalSeconds.ToString();
+            Console.WriteLine(bb);
         }
     }
 }
