@@ -6,7 +6,6 @@ obj/
 Log/
 Logs/
 Web*.Config
-appsettings*.json
 */.vs/
 */.vscode/
 */bin/
@@ -14,7 +13,6 @@ appsettings*.json
 */Log/
 */Logs/
 */Web*.Config
-*/appsettings*.json
 */*/.vs/
 */*/.vscode/
 */*/bin/
@@ -27,3 +25,4 @@ appsettings*.json
 /UFX.SCM.OpenApi/.config
 *.pubxml
 *.user
+/.vs
