@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "HIob6UQPZ+hdZ6LSexqoeHIkbaGpAefgoiHkP0DmXCJNOGgtryz2fYzAAnqgZcPbRCZicQDfTG0KX7M1BBykaA==",
+  "dgSpecHash": "mNNMYVfFHpleg6roeAmAqjF+A4LxIo9SumzW+orKvsLaDpr8AuaugsrfdIe+QVByiivEvgG+nZCa+RjEDRrixw==",
   "success": true,
-  "projectFilePath": "E:\\Project\\.NET\\TestProject\\MSTest\\MSTest.csproj",
+  "projectFilePath": "E:\\软件\\TestProject\\MSTest\\MSTest.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Administrator\\.nuget\\packages\\coverlet.collector\\3.0.3\\coverlet.collector.3.0.3.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\genfu\\1.6.0\\genfu.1.6.0.nupkg.sha512",

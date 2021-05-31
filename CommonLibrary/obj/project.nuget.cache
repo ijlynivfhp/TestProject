@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "f0NgfKp/gk1/gajw6gIu43owHSxuPPkCccOQt0BK5xDoDqMhLbEiPhRlQz0I+C4xxajGyLUN+W7LmCbSuYMETw==",
+  "dgSpecHash": "7DZSjYPXy2hO6Pza2v2NSHCQFpiUXcsc3TBjxpCEQGg4sKaFJgJS2NYIAsWUjDCBq5+/S3WpIkviCs8uVXPWSA==",
   "success": true,
-  "projectFilePath": "E:\\Project\\.NET\\TestProject\\CommonLibrary\\CommonLibrary.csproj",
+  "projectFilePath": "E:\\软件\\TestProject\\CommonLibrary\\CommonLibrary.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Administrator\\.nuget\\packages\\genfu\\1.6.0\\genfu.1.6.0.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.entityframeworkcore\\5.0.6\\microsoft.entityframeworkcore.5.0.6.nupkg.sha512",
