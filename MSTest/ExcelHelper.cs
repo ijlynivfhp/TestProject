@@ -27,7 +27,8 @@ namespace MSTest
             var tableTwo = SqlBulkCopyHelper.ListToTable(dataListTwo, "BulkTestTwo");
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            SqlBulkCopyHelper.BulkInsertTables(new List<DataTable>() { table, tableTwo }).Wait();
+            var task = SqlBulkCopyHelper.BulkInsertTables(new List<DataTable>() { table, tableTwo });
+            task.Wait();
             sw.Stop();
             string bb = sw.Elapsed.TotalSeconds.ToString();
             Console.WriteLine(bb);
@@ -39,17 +40,18 @@ namespace MSTest
             var tableTwo = SqlCoreHelper.ExecuteDataSetText("select * from BulkTestTwo", null).Tables[0];
             foreach (DataRow item in table.Rows)
             {
-                item["FieldD"] = "1111";
+                item["FieldD"] = "222";
             }
             foreach (DataRow item in tableTwo.Rows)
             {
-                item["FieldD"] = "2222";
+                item["FieldD"] = "333";
             }
             table.TableName = "BulkTest";
             tableTwo.TableName = "BulkTestTwo";
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            SqlBulkCopyHelper.BulkUpdateTables(new List<BulkTable>() { new BulkTable() { Table = table }, new BulkTable() { Table = tableTwo } });
+            var task = SqlBulkCopyHelper.BulkUpdateTables(new List<BulkTable>() { new BulkTable() { Table = table }, new BulkTable() { Table = tableTwo } });
+            task.Wait();
             sw.Stop();
             string bb = sw.Elapsed.TotalSeconds.ToString();
             Console.WriteLine(bb);
@@ -76,7 +78,8 @@ namespace MSTest
             tableTwoUpdate.TableName = "BulkTestTwo";
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            SqlBulkCopyHelper.BulkEditTables(new List<DataTable>() { table, tableTwo }, new List<BulkTable>() { new BulkTable() { Table = tableUpdate }, new BulkTable() { Table = tableTwoUpdate } });
+            var task = SqlBulkCopyHelper.BulkEditTables(new List<DataTable>() { table, tableTwo }, new List<BulkTable>() { new BulkTable() { Table = tableUpdate }, new BulkTable() { Table = tableTwoUpdate } });
+            task.Wait();
             sw.Stop();
             string bb = sw.Elapsed.TotalSeconds.ToString();
             Console.WriteLine(bb);

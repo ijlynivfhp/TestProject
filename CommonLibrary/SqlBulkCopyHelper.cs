@@ -37,45 +37,45 @@ namespace MSTest
         /// <returns></returns>
         public async static Task<string> BulkInsertTables(List<DataTable> insertTables)
         {
-            string resStr = string.Empty;
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
                 SqlTransaction tran = conn.BeginTransaction();//开启事务
-                SqlBulkCopy sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
+                var sqlBulkCopyList = new List<SqlBulkCopy>();
                 try
                 {
-                    foreach (var item in insertTables)
+                    var insertTasks = insertTables.Select(async o =>
                     {
-                        sqlbulkcopy.ColumnMappings.Clear();
-                        sqlbulkcopy.DestinationTableName = item.TableName;
-                        for (int i = 0; i < item.Columns.Count; i++)
-                        {
-                            sqlbulkcopy.ColumnMappings.Add(item.Columns[i].ColumnName, item.Columns[i].ColumnName);
-                        }
-                        await sqlbulkcopy.WriteToServerAsync(item);
-                    }
+                        var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
+                        sqlBulkCopyList.Add(sqlbulkcopy);
+                        sqlbulkcopy.DestinationTableName = o.TableName;
+                        foreach (DataColumn item in o.Columns)
+                            sqlbulkcopy.ColumnMappings.Add(item.ColumnName, item.ColumnName);
+                        await sqlbulkcopy.WriteToServerAsync(o);
+                    });
+                    await Task.WhenAll(insertTasks);
                     tran.Commit();
                 }
                 catch (Exception ex)
                 {
-                    resStr = ex.Message;
+                    return ex.Message;
                 }
                 finally
                 {
-                    sqlbulkcopy.Close();
-                    conn.Close();
+                    foreach (var item in sqlBulkCopyList)
+                        item.Close();
                     tran.Dispose();
                 }
             }
-            return resStr;
+            return string.Empty;
         }
+
         /// <summary>
         /// 执行SqlBulkCopy批量更新，执行事务。
         /// </summary>
         /// <param name="bulkTables"></param>
         /// <returns></returns>
-        public static string BulkUpdateTables(List<BulkTable> bulkTables)
+        public async static Task<string> BulkUpdateTables(List<BulkTable> bulkTables)
         {
             var updateTables = bulkTables.Select(o => o.Table).ToList();
 
@@ -92,10 +92,9 @@ namespace MSTest
             {
                 conn.Open();
                 SqlTransaction tran = conn.BeginTransaction();//开启事务
-
                 using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = 60 })
                 {
-                    var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
+                    var sqlBulkCopyList = new List<SqlBulkCopy>();
                     try
                     {
                         updateTables.ForEach(o =>
@@ -104,19 +103,18 @@ namespace MSTest
                             cmd.CommandText += string.Format(@"SELECT A.* into {0} from {1} A WHERE 1=2;", tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.TableName);
                             foreach (DataColumn item in o.Columns) bulkTable.TableFields.Add(item.ColumnName);
                         });
-                        cmd.ExecuteNonQuery();
+                        await cmd.ExecuteNonQueryAsync();
 
                         cmd.CommandText = default;
-                        updateTables.ForEach(o =>
+                        var updateTasks = updateTables.Select(async o =>
                         {
                             var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
-                            sqlbulkcopy.ColumnMappings.Clear();
-                            sqlbulkcopy.DestinationTableName = tempTablePre + bulkTable.TableName + tempTableSuf;
-                            bulkTable.TableFields.ForEach(p =>
-                            {
-                                sqlbulkcopy.ColumnMappings.Add(p, p);
-                            });
-                            sqlbulkcopy.WriteToServer(o);
+                            var sqlBulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
+                            sqlBulkCopyList.Add(sqlBulkcopy);
+                            sqlBulkcopy.DestinationTableName = tempTablePre + bulkTable.TableName + tempTableSuf;
+                            foreach (var item in bulkTable.TableFields)
+                                sqlBulkcopy.ColumnMappings.Add(item, item);
+                            await sqlBulkcopy.WriteToServerAsync(o);
 
                             var tempSql = new StringBuilder();
                             if (bulkTable.UpdateFields.Count > 0)
@@ -127,8 +125,8 @@ namespace MSTest
                             }
                             cmd.CommandText += string.Format(@"UPDATE A SET {0} FROM dbo.{1} A INNER JOIN {2} B ON A.{3}=B.{3};", tempSql.ToString().Trim(','), bulkTable.TableName, tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.Primary);
                         });
-                        cmd.ExecuteNonQuery();
-
+                        await Task.WhenAll(updateTasks);
+                        await cmd.ExecuteNonQueryAsync();
                         tran.Commit();
                     }
                     catch (Exception ex)
@@ -137,17 +135,13 @@ namespace MSTest
                     }
                     finally
                     {
-                        var dropTempSql = new StringBuilder();
-                        bulkTables.ForEach(o =>
-                        {
-                            dropTempSql.AppendLine(string.Format(@"if object_id('tempdb..{0}') is not null Begin
-                            drop table {0}
-                            End;", tempTablePre + o.TableName + tempTableSuf));
-                        });
-                        cmd.CommandText = dropTempSql.ToString();
-                        cmd.ExecuteNonQuery();
+                        cmd.CommandText = default;
+                        foreach (var item in bulkTables)
+                            cmd.CommandText += string.Format(@"if object_id('tempdb..{0}') is not null Begin drop table {0} End;", tempTablePre + item.TableName + tempTableSuf);
+                        await cmd.ExecuteNonQueryAsync();
 
-                        sqlbulkcopy.Close();
+                        foreach (var item in sqlBulkCopyList)
+                            item.Close();
                         tran.Dispose();
                     }
                 }
@@ -160,7 +154,7 @@ namespace MSTest
         /// </summary>
         /// <param name="bulkTables"></param>
         /// <returns></returns>
-        public static string BulkEditTables(List<DataTable> insertTables, List<BulkTable> bulkTables)
+        public async static Task<string> BulkEditTables(List<DataTable> insertTables, List<BulkTable> bulkTables)
         {
             var updateTables = bulkTables.Select(o => o.Table).ToList();
             foreach (var item in bulkTables)
@@ -179,7 +173,7 @@ namespace MSTest
 
                 using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = 60 })
                 {
-                    var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
+                    var sqlBulkCopyList = new List<SqlBulkCopy>();
                     try
                     {
                         updateTables.ForEach(o =>
@@ -188,28 +182,27 @@ namespace MSTest
                             cmd.CommandText += string.Format(@"SELECT A.* into {0} from {1} A WHERE 1=2;", tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.TableName);
                             foreach (DataColumn item in o.Columns) bulkTable.TableFields.Add(item.ColumnName);
                         });
-                        cmd.ExecuteNonQuery();
+                        await cmd.ExecuteNonQueryAsync();
 
-                        insertTables.ForEach(o =>
+                        var insertTasks = insertTables.Select(async o =>
                         {
-                            sqlbulkcopy.ColumnMappings.Clear();
+                            var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
+                            sqlBulkCopyList.Add(sqlbulkcopy);
                             sqlbulkcopy.DestinationTableName = o.TableName;
                             foreach (DataColumn item in o.Columns) sqlbulkcopy.ColumnMappings.Add(item.ColumnName, item.ColumnName);
-                            sqlbulkcopy.WriteToServer(o);
+                            await sqlbulkcopy.WriteToServerAsync(o);
                         });
 
                         cmd.CommandText = default;
-                        updateTables.ForEach(o =>
+                        var updateTasks = updateTables.Select(async o =>
                         {
                             var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
-                            sqlbulkcopy.ColumnMappings.Clear();
-                            sqlbulkcopy.DestinationTableName = tempTablePre + bulkTable.TableName + tempTableSuf;
-                            bulkTable.TableFields.ForEach(p =>
-                            {
-                                sqlbulkcopy.ColumnMappings.Add(p, p);
-                            });
-                            sqlbulkcopy.WriteToServer(o);
-
+                            var sqlBulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
+                            sqlBulkCopyList.Add(sqlBulkcopy);
+                            sqlBulkcopy.DestinationTableName = tempTablePre + bulkTable.TableName + tempTableSuf;
+                            foreach (var item in bulkTable.TableFields)
+                                sqlBulkcopy.ColumnMappings.Add(item, item);
+                            await sqlBulkcopy.WriteToServerAsync(o);
                             var tempSql = new StringBuilder();
                             if (bulkTable.UpdateFields.Count > 0)
                                 foreach (var column in bulkTable.UpdateFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
@@ -219,7 +212,8 @@ namespace MSTest
                             }
                             cmd.CommandText += string.Format(@"UPDATE A SET {0} FROM dbo.{1} A INNER JOIN {2} B ON A.{3}=B.{3};", tempSql.ToString().Trim(','), bulkTable.TableName, tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.Primary);
                         });
-                        cmd.ExecuteNonQuery();
+                        await Task.WhenAll(updateTasks.Concat(insertTasks));
+                        await cmd.ExecuteNonQueryAsync();
 
                         tran.Commit();
                     }
@@ -230,15 +224,12 @@ namespace MSTest
                     finally
                     {
                         cmd.CommandText = default;
-                        bulkTables.ForEach(o =>
-                        {
-                            cmd.CommandText += string.Format(@"if object_id('tempdb..{0}') is not null Begin
-                            drop table {0}
-                            End;", tempTablePre + o.TableName + tempTableSuf);
-                        });
-                        cmd.ExecuteNonQuery();
+                        foreach (var item in bulkTables)
+                            cmd.CommandText += string.Format(@"if object_id('tempdb..{0}') is not null Begin drop table {0} End;", tempTablePre + item.TableName + tempTableSuf);
+                        await cmd.ExecuteNonQueryAsync();
 
-                        sqlbulkcopy.Close();
+                        foreach (var item in sqlBulkCopyList)
+                            item.Close();
                         tran.Dispose();
                     }
                 }
