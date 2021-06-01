@@ -62,8 +62,8 @@ namespace MSTest
             var table = SqlBulkCopyHelper.ListToTable(dataList, "BulkTest");
             var tableTwo = SqlBulkCopyHelper.ListToTable(dataListTwo, "BulkTestTwo");
 
-            var tableUpdate = SqlCoreHelper.ExecuteDataSetText("select top 10000 * from BulkTest order by FieldU asc", null).Tables[0];
-            var tableTwoUpdate = SqlCoreHelper.ExecuteDataSetText("select top 10000 * from BulkTestTwo order by FieldU asc", null).Tables[0];
+            var tableUpdate = SqlCoreHelper.ExecuteDataSetText("select top 500000 * from BulkTest order by FieldU asc", null).Tables[0];
+            var tableTwoUpdate = SqlCoreHelper.ExecuteDataSetText("select top 500000 * from BulkTestTwo order by FieldU asc", null).Tables[0];
             foreach (DataRow item in tableUpdate.Rows)
             {
                 item["FieldD"] = "5555";
