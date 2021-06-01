@@ -70,6 +70,7 @@ namespace MSTest
             }
             return resStr;
         }
+
         /// <summary>
         /// 执行SqlBulkCopy批量更新，执行事务。
         /// </summary>
