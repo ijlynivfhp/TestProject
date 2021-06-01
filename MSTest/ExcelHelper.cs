@@ -21,8 +21,8 @@ namespace MSTest
         [TestMethod]
         public void DataInsert()
         {
-            var dataList = CommonHelper.GetTestListDto(500000);
-            var dataListTwo = CommonHelper.GetTestListDtoTwo(500000);
+            var dataList = CommonHelper.GetTestListDto(10000);
+            var dataListTwo = CommonHelper.GetTestListDtoTwo(10000);
             var table = SqlBulkCopyHelper.ListToTable(dataList, "BulkTest");
             var tableTwo = SqlBulkCopyHelper.ListToTable(dataListTwo, "BulkTestTwo");
             Stopwatch sw = new Stopwatch();
@@ -49,7 +49,7 @@ namespace MSTest
             tableTwo.TableName = "BulkTestTwo";
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            SqlBulkCopyHelper.BulkUpdateTables(new List<BulkTable>() { new BulkTable() { Table = table }, new BulkTable() { Table = tableTwo } });
+            SqlBulkCopyHelper.BulkUpdateTables(new List<BulkTable>() { new BulkTable() { Table = table }, new BulkTable() { Table = tableTwo } }).Wait();
             sw.Stop();
             string bb = sw.Elapsed.TotalSeconds.ToString();
             Console.WriteLine(bb);

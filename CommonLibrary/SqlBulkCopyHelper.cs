@@ -75,7 +75,7 @@ namespace MSTest
         /// </summary>
         /// <param name="bulkTables"></param>
         /// <returns></returns>
-        public static string BulkUpdateTables(List<BulkTable> bulkTables)
+        public async static Task<string> BulkUpdateTables(List<BulkTable> bulkTables)
         {
             var updateTables = bulkTables.Select(o => o.Table).ToList();
             foreach (var item in bulkTables)
@@ -95,7 +95,7 @@ namespace MSTest
             {
                 conn.Open();
                 SqlTransaction tran = conn.BeginTransaction();//开启事务
-                SqlBulkCopy sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
+                var sqlbulkcopyList = new List<SqlBulkCopy>();
                 try
                 {
                     using (SqlCommand cmd = new SqlCommand("", conn, tran))
@@ -107,34 +107,31 @@ namespace MSTest
                             foreach (DataColumn item in o.Columns) bulkTable.TableFields.Add(item.ColumnName);
                         });
                         cmd.CommandText = tempTablesInsertSql.ToString();
-                        cmd.ExecuteNonQuery();
-
-                        updateTables.ForEach(o =>
+                        await cmd.ExecuteNonQueryAsync();
+                         
+                        updateTables.ForEach(async o =>
                         {
+                            tempSql = new StringBuilder();
                             var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
-                            sqlbulkcopy.ColumnMappings.Clear();
-                            sqlbulkcopy.DestinationTableName = tempTablePre + bulkTable.TableName + tempTableSuf;
+                            var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { DestinationTableName = tempTablePre + bulkTable.TableName + tempTableSuf };
                             bulkTable.TableFields.ForEach(p =>
                             {
                                 sqlbulkcopy.ColumnMappings.Add(p, p);
                             });
-                            sqlbulkcopy.WriteToServer(o);
-                        });
-
-                        updateTables.ForEach(o =>
-                        {
-                            tempSql = new StringBuilder();
-                            var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
+                            
                             if (bulkTable.UpdateFields.Count > 0)
                                 foreach (var column in bulkTable.UpdateFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
                             else
                             {
                                 foreach (var column in bulkTable.TableFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
                             }
+                            await sqlbulkcopy.WriteToServerAsync(o);
                             tempTablesUpdateSql.AppendLine(string.Format(@"UPDATE A SET {0} FROM dbo.{1} A INNER JOIN {2} B ON A.Id=B.Id;", tempSql.ToString().Trim(','), bulkTable.TableName, tempTablePre + bulkTable.TableName + tempTableSuf));
+                            sqlbulkcopyList.Add(sqlbulkcopy);
                         });
+
                         cmd.CommandText = tempTablesUpdateSql.ToString();
-                        cmd.ExecuteNonQuery();
+                        await cmd.ExecuteNonQueryAsync();
                     }
                     tran.Commit();
                 }
@@ -144,11 +141,11 @@ namespace MSTest
                 }
                 finally
                 {
-                    sqlbulkcopy.Close();
+                    sqlbulkcopyList.AsParallel().ForAll(o => o.Close());
                     conn.Close();
                     tran.Dispose();
                     var dropTempSql = new StringBuilder();
-                    bulkTables.ForEach(o =>
+                    bulkTables.AsParallel().ForAll(o =>
                     {
                         dropTempSql.AppendLine(string.Format(@"if object_id('tempdb..{0}') is not null Begin
                             drop table {0}
