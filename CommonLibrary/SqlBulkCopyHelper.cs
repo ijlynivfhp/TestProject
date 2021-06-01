@@ -78,37 +78,35 @@ namespace MSTest
         public static string BulkUpdateTables(List<BulkTable> bulkTables)
         {
             var updateTables = bulkTables.Select(o => o.Table).ToList();
+
             foreach (var item in bulkTables)
-            {
                 if (string.IsNullOrEmpty(item.TableName))
                     item.TableName = item.Table.TableName;
-            }
 
-            foreach (var item in bulkTables) item.UpdateFields = item.UpdateFields.Except(item.RemoveFields).ToList();
+            foreach (var item in bulkTables)
+                item.UpdateFields = item.UpdateFields.Except(item.RemoveFields).ToList();
 
             var tempTableSuf = DateTime.Now.ToString("yyyyMMddHHmmss");
-            var tempTablesInsertSql = new StringBuilder();
-            var tempTablesUpdateSql = new StringBuilder();
-            var tempSql = new StringBuilder();
             Func<DataTable, BulkTable, bool> func = (o, p) => o.TableName == p.TableName;
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
                 SqlTransaction tran = conn.BeginTransaction();//开启事务
-                SqlBulkCopy sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
-                try
+
+                using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = 60 })
                 {
-                    using (SqlCommand cmd = new SqlCommand("", conn, tran))
+                    var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
+                    try
                     {
                         updateTables.ForEach(o =>
                         {
                             var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
-                            tempTablesInsertSql.AppendLine(string.Format(@"SELECT A.* into {0} from {1} A WHERE 1=2;", tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.TableName));
+                            cmd.CommandText += string.Format(@"SELECT A.* into {0} from {1} A WHERE 1=2;", tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.TableName);
                             foreach (DataColumn item in o.Columns) bulkTable.TableFields.Add(item.ColumnName);
                         });
-                        cmd.CommandText = tempTablesInsertSql.ToString();
                         cmd.ExecuteNonQuery();
 
+                        cmd.CommandText = default;
                         updateTables.ForEach(o =>
                         {
                             var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
@@ -119,45 +117,42 @@ namespace MSTest
                                 sqlbulkcopy.ColumnMappings.Add(p, p);
                             });
                             sqlbulkcopy.WriteToServer(o);
-                        });
 
-                        updateTables.ForEach(o =>
-                        {
-                            tempSql = new StringBuilder();
-                            var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
+                            var tempSql = new StringBuilder();
                             if (bulkTable.UpdateFields.Count > 0)
                                 foreach (var column in bulkTable.UpdateFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
                             else
                             {
                                 foreach (var column in bulkTable.TableFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
                             }
-                            tempTablesUpdateSql.AppendLine(string.Format(@"UPDATE A SET {0} FROM dbo.{1} A INNER JOIN {2} B ON A.Id=B.Id;", tempSql.ToString().Trim(','), bulkTable.TableName, tempTablePre + bulkTable.TableName + tempTableSuf));
+                            cmd.CommandText += string.Format(@"UPDATE A SET {0} FROM dbo.{1} A INNER JOIN {2} B ON A.{3}=B.{3};", tempSql.ToString().Trim(','), bulkTable.TableName, tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.Primary);
                         });
-                        cmd.CommandText = tempTablesUpdateSql.ToString();
                         cmd.ExecuteNonQuery();
+
+                        tran.Commit();
                     }
-                    tran.Commit();
-                }
-                catch (Exception ex)
-                {
-                    return ex.Message;
-                }
-                finally
-                {
-                    sqlbulkcopy.Close();
-                    conn.Close();
-                    tran.Dispose();
-                    var dropTempSql = new StringBuilder();
-                    bulkTables.ForEach(o =>
+                    catch (Exception ex)
                     {
-                        dropTempSql.AppendLine(string.Format(@"if object_id('tempdb..{0}') is not null Begin
+                        return ex.Message;
+                    }
+                    finally
+                    {
+                        var dropTempSql = new StringBuilder();
+                        bulkTables.ForEach(o =>
+                        {
+                            dropTempSql.AppendLine(string.Format(@"if object_id('tempdb..{0}') is not null Begin
                             drop table {0}
                             End;", tempTablePre + o.TableName + tempTableSuf));
-                    });
-                    SqlCoreHelper.ExecteNonQuery(connectionString, CommandType.Text, dropTempSql.ToString());
+                        });
+                        cmd.CommandText = dropTempSql.ToString();
+                        cmd.ExecuteNonQuery();
+
+                        sqlbulkcopy.Close();
+                        tran.Dispose();
+                    }
                 }
             }
-            return "";
+            return string.Empty;
         }
 
         /// <summary>
@@ -169,34 +164,30 @@ namespace MSTest
         {
             var updateTables = bulkTables.Select(o => o.Table).ToList();
             foreach (var item in bulkTables)
-            {
                 if (string.IsNullOrEmpty(item.TableName))
                     item.TableName = item.Table.TableName;
-            }
 
-            foreach (var item in bulkTables) item.UpdateFields = item.UpdateFields.Except(item.RemoveFields).ToList();
+            foreach (var item in bulkTables)
+                item.UpdateFields = item.UpdateFields.Except(item.RemoveFields).ToList();
 
             var tempTableSuf = DateTime.Now.ToString("yyyyMMddHHmmss");
-            var tempTablesInsertSql = new StringBuilder();
-            var tempTablesUpdateSql = new StringBuilder();
-            var tempSql = new StringBuilder();
             Func<DataTable, BulkTable, bool> func = (o, p) => o.TableName == p.TableName;
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
                 SqlTransaction tran = conn.BeginTransaction();//开启事务
-                SqlBulkCopy sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
-                try
+
+                using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = 60 })
                 {
-                    using (SqlCommand cmd = new SqlCommand("", conn, tran))
+                    var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
+                    try
                     {
                         updateTables.ForEach(o =>
                         {
                             var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
-                            tempTablesInsertSql.AppendLine(string.Format(@"SELECT A.* into {0} from {1} A WHERE 1=2;", tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.TableName));
+                            cmd.CommandText += string.Format(@"SELECT A.* into {0} from {1} A WHERE 1=2;", tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.TableName);
                             foreach (DataColumn item in o.Columns) bulkTable.TableFields.Add(item.ColumnName);
                         });
-                        cmd.CommandText = tempTablesInsertSql.ToString();
                         cmd.ExecuteNonQuery();
 
                         insertTables.ForEach(o =>
@@ -206,6 +197,8 @@ namespace MSTest
                             foreach (DataColumn item in o.Columns) sqlbulkcopy.ColumnMappings.Add(item.ColumnName, item.ColumnName);
                             sqlbulkcopy.WriteToServer(o);
                         });
+
+                        cmd.CommandText = default;
                         updateTables.ForEach(o =>
                         {
                             var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
@@ -216,45 +209,41 @@ namespace MSTest
                                 sqlbulkcopy.ColumnMappings.Add(p, p);
                             });
                             sqlbulkcopy.WriteToServer(o);
-                        });
 
-                        updateTables.ForEach(o =>
-                        {
-                            tempSql = new StringBuilder();
-                            var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
+                            var tempSql = new StringBuilder();
                             if (bulkTable.UpdateFields.Count > 0)
                                 foreach (var column in bulkTable.UpdateFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
                             else
                             {
                                 foreach (var column in bulkTable.TableFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
                             }
-                            tempTablesUpdateSql.AppendLine(string.Format(@"UPDATE A SET {0} FROM dbo.{1} A INNER JOIN {2} B ON A.Id=B.Id;", tempSql.ToString().Trim(','), bulkTable.TableName, tempTablePre + bulkTable.TableName + tempTableSuf));
+                            cmd.CommandText += string.Format(@"UPDATE A SET {0} FROM dbo.{1} A INNER JOIN {2} B ON A.{3}=B.{3};", tempSql.ToString().Trim(','), bulkTable.TableName, tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.Primary);
                         });
-                        cmd.CommandText = tempTablesUpdateSql.ToString();
                         cmd.ExecuteNonQuery();
+
+                        tran.Commit();
                     }
-                    tran.Commit();
-                }
-                catch (Exception ex)
-                {
-                    return ex.Message;
-                }
-                finally
-                {
-                    sqlbulkcopy.Close();
-                    conn.Close();
-                    tran.Dispose();
-                    var dropTempSql = new StringBuilder();
-                    bulkTables.ForEach(o =>
+                    catch (Exception ex)
                     {
-                        dropTempSql.AppendLine(string.Format(@"if object_id('tempdb..{0}') is not null Begin
+                        return ex.Message;
+                    }
+                    finally
+                    {
+                        cmd.CommandText = default;
+                        bulkTables.ForEach(o =>
+                        {
+                            cmd.CommandText += string.Format(@"if object_id('tempdb..{0}') is not null Begin
                             drop table {0}
-                            End;", tempTablePre + o.TableName + tempTableSuf));
-                    });
-                    SqlCoreHelper.ExecteNonQuery(connectionString, CommandType.Text, dropTempSql.ToString());
+                            End;", tempTablePre + o.TableName + tempTableSuf);
+                        });
+                        cmd.ExecuteNonQuery();
+
+                        sqlbulkcopy.Close();
+                        tran.Dispose();
+                    }
                 }
             }
-            return "";
+            return string.Empty;
         }
 
         #region SqlBulkCopy
