@@ -42,7 +42,7 @@ namespace MSTest
             {
                 conn.Open();
                 SqlTransaction tran = conn.BeginTransaction();//开启事务
-                SqlBulkCopy sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
+                SqlBulkCopy sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 600 };
                 try
                 {
                     foreach (var item in insertTables)
@@ -94,9 +94,9 @@ namespace MSTest
                 conn.Open();
                 SqlTransaction tran = conn.BeginTransaction();//开启事务
 
-                using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = 60 })
+                using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = 600 })
                 {
-                    var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
+                    var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 600 };
                     try
                     {
                         updateTables.ForEach(o =>
@@ -178,9 +178,9 @@ namespace MSTest
                 conn.Open();
                 SqlTransaction tran = conn.BeginTransaction();//开启事务
 
-                using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = 60 })
+                using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = 600 })
                 {
-                    var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
+                    var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 600 };
                     try
                     {
                         updateTables.ForEach(o =>
@@ -604,7 +604,7 @@ THEN UPDATE SET T.[DisabilityCardId]=S.[DisabilityCardId],T.[PartId]=S.[PartId],
                         }
 
                         // 执行Command命令 使用临时表的数据去更新目标表中的数据  然后删除临时表
-                        command.CommandTimeout = 300;
+                        command.CommandTimeout = 600;
                         command.CommandText = updateSql;
                         command.ExecuteNonQuery();
                     }
