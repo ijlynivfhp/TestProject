@@ -42,7 +42,7 @@ namespace MSTest
             {
                 var insertTasks = insertTables.Select(async o =>
                 {
-                    var sqlbulkcopy = new SqlBulkCopy(connectionString, SqlBulkCopyOptions.CheckConstraints) { BulkCopyTimeout = 600 };
+                    var sqlbulkcopy = new SqlBulkCopy(connectionString) { BulkCopyTimeout = 600 };
                     sqlBulkCopyList.Add(sqlbulkcopy);
                     sqlbulkcopy.DestinationTableName = o.TableName;
                     foreach (DataColumn item in o.Columns)
@@ -200,7 +200,7 @@ namespace MSTest
                             }
                             cmd.CommandText += string.Format(@"UPDATE A SET {0} FROM dbo.{1} A INNER JOIN {2} B ON A.{3}=B.{3};", tempSql.ToString().Trim(','), bulkTable.TableName, tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.Primary);
                         });
-                        await Task.WhenAll(updateTasks.Concat(insertTasks));
+                        await Task.WhenAll(insertTasks.Concat(updateTasks));
                         await cmd.ExecuteNonQueryAsync();
                     }
                     catch (Exception ex)
