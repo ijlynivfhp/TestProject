@@ -21,7 +21,7 @@ namespace MSTest
         [TestMethod]
         public void DataInsert()
         {
-            var dataList = CommonHelper.GetTestListDto(50000000);
+            var dataList = CommonHelper.GetTestListDto(500000);
             var dataListTwo = CommonHelper.GetTestListDtoTwo(500000);
             var table = SqlBulkCopyHelper.ListToTable(dataList, "BulkTest");
             var tableTwo = SqlBulkCopyHelper.ListToTable(dataListTwo, "BulkTestTwo");
