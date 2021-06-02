@@ -21,8 +21,8 @@ namespace MSTest
         [TestMethod]
         public void DataInsert()
         {
-            var dataList = CommonHelper.GetTestListDto(500000);
-            var dataListTwo = CommonHelper.GetTestListDtoTwo(500000);
+            var dataList = CommonHelper.GetTestListDto(5000);
+            var dataListTwo = CommonHelper.GetTestListDtoTwo(5000);
             var table = SqlBulkCopyHelper.ListToTable(dataList, "BulkTest");
             var tableTwo = SqlBulkCopyHelper.ListToTable(dataListTwo, "BulkTestTwo");
             Stopwatch sw = new Stopwatch();
@@ -57,13 +57,13 @@ namespace MSTest
         [TestMethod]
         public void DataEdit()
         {
-            var dataList = CommonHelper.GetTestListDto(500000);
-            var dataListTwo = CommonHelper.GetTestListDtoTwo(500000);
+            var dataList = CommonHelper.GetTestListDto(5000);
+            var dataListTwo = CommonHelper.GetTestListDtoTwo(5000);
             var table = SqlBulkCopyHelper.ListToTable(dataList, "BulkTest");
             var tableTwo = SqlBulkCopyHelper.ListToTable(dataListTwo, "BulkTestTwo");
 
-            var tableUpdate = SqlCoreHelper.ExecuteDataSetText("select top 500000 * from BulkTest order by FieldU asc", null).Tables[0];
-            var tableTwoUpdate = SqlCoreHelper.ExecuteDataSetText("select top 500000 * from BulkTestTwo order by FieldU asc", null).Tables[0];
+            var tableUpdate = SqlCoreHelper.ExecuteDataSetText("select top 5000 * from BulkTest order by FieldU asc", null).Tables[0];
+            var tableTwoUpdate = SqlCoreHelper.ExecuteDataSetText("select top 5000 * from BulkTestTwo order by FieldU asc", null).Tables[0];
             foreach (DataRow item in tableUpdate.Rows)
             {
                 item["FieldD"] = "5555";

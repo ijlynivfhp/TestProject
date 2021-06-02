@@ -26,7 +26,6 @@ namespace DTO
         public string FieldL { get; set; }
         public string FieldM { get; set; }
         public string FieldN { get; set; }
-        public string FieldO { get; set; }
         public string FieldP { get; set; }
         public string FieldQ { get; set; }
         public string FieldR { get; set; }
@@ -34,7 +33,6 @@ namespace DTO
         public string FieldT { get; set; }
         public DateTime FieldU { get; set; } = DateTime.Now;
         public decimal? FieldV { get; set; }
-        public decimal FieldW { get; set; }
         public int FieldX { get; set; }
     }
 
@@ -56,13 +54,10 @@ namespace DTO
         public string FieldM { get; set; }
         public string FieldN { get; set; }
         public string FieldO { get; set; }
-        public string FieldP { get; set; }
         public string FieldQ { get; set; }
         public string FieldR { get; set; }
         public string FieldS { get; set; }
         public string FieldT { get; set; }
-        public DateTime FieldU { get; set; } = DateTime.Now;
-        public decimal? FieldV { get; set; }
         public decimal FieldW { get; set; }
         public int FieldX { get; set; }
     }

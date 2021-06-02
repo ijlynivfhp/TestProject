@@ -261,25 +261,46 @@ namespace MSTest
             if (string.IsNullOrEmpty(tableName))
                 tableName = modelType.Name;
             DataTable dt = new DataTable(tableName);
-            List<SysColumn> columns = GetTableColumns(tableName);
-            List<PropertyInfo> mappingProps = new List<PropertyInfo>();
+            var columns = GetTableColumns(tableName);
+            var mappingProps = new List<PropertyInfo>();
 
             var props = modelType.GetProperties();
             for (int i = 0; i < columns.Count; i++)
             {
                 var column = columns[i];
                 PropertyInfo mappingProp = props.Where(a => a.Name == column.Name).FirstOrDefault();
-                Type dataType = null;
-                if (mappingProp == null)
+                Type dataType = default;
+                if (mappingProp == default)
                     dataType = SqlBulkCopyHelper.SqlTypeString2CsharpType(column.Type);
                 else
                 {
                     mappingProps.Add(mappingProp);
-                    dataType = SqlBulkCopyHelper.GetUnderlyingType(mappingProp.PropertyType);
+                    if (column.IsNull == 0)
+                        dataType = mappingProp.PropertyType;
+                    else
+                        dataType = Nullable.GetUnderlyingType(mappingProp.PropertyType) ?? mappingProp.PropertyType;
                 }
                 if (dataType.IsEnum)
                     dataType = typeof(int);
-                dt.Columns.Add(new DataColumn(column.Name, dataType));
+                var dataColumn = new DataColumn(column.Name, dataType);
+                if (column.IsNull == 0)
+                {
+                    if (dataType == typeof(string))
+                        dataColumn.DefaultValue = string.IsNullOrEmpty(column.Default) ? string.Empty : column.Default;
+                    if (dataType == typeof(int) || dataType == typeof(int?))
+                        dataColumn.DefaultValue = string.IsNullOrEmpty(column.Default) ? 0 : int.Parse(column.Default);
+                    if (dataType == typeof(decimal) || dataType == typeof(decimal?))
+                        dataColumn.DefaultValue = string.IsNullOrEmpty(column.Default) ? 0 : decimal.Parse(column.Default);
+                    if (dataType == typeof(double) || dataType == typeof(double?))
+                        dataColumn.DefaultValue = string.IsNullOrEmpty(column.Default) ? 0 : double.Parse(column.Default);
+                    if (dataType == typeof(bool) || dataType == typeof(bool?))
+                        dataColumn.DefaultValue = string.IsNullOrEmpty(column.Default) ? false : bool.Parse(column.Default);
+                    if (dataType == typeof(DateTime) || dataType == typeof(DateTime?))
+                        dataColumn.DefaultValue = DateTime.Now;
+                    if (dataType == typeof(Guid) || dataType == typeof(Guid?))
+                        dataColumn.DefaultValue = Guid.Empty;
+                }
+                dt.Columns.Add(dataColumn);
             }
 
             var mappingPropsNames = mappingProps.Select(o => o.Name).ToList();
@@ -297,20 +318,6 @@ namespace MSTest
                             value = (int)value;
                     dr[prop.Name] = value ?? DBNull.Value;
                 }
-                columns.ForEach(o =>
-                {
-                    var type = SqlBulkCopyHelper.SqlTypeString2CsharpType(o.Type);
-                    if (type == typeof(System.Boolean))
-                    {
-                        if (o.IsNull == 0)
-                            dr[o.Name] = Convert.ToInt32(o.Default);
-                    }
-                    else if (type == typeof(System.Decimal))
-                    {
-                        if (o.IsNull == 0)
-                            dr[o.Name] = Convert.ToDecimal(o.Default);
-                    }
-                });
                 dt.Rows.Add(dr);
             }
             return dt;
@@ -419,7 +426,7 @@ namespace MSTest
         {
             SqlDbType dbType = SqlDbType.Variant;//默认为Object
 
-            switch (sqlTypeString.ToLower())
+            switch (sqlTypeString)
             {
                 case "int":
                     dbType = SqlDbType.Int;
