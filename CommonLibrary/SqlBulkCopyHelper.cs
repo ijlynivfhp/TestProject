@@ -303,7 +303,7 @@ namespace MSTest
                 {
                     PropertyInfo prop = mappingProps[i];
                     object value = prop.GetValue(model);
-                    if (SqlBulkCopyHelper.GetUnderlyingType(prop.PropertyType).IsEnum)
+                    if (prop.PropertyType.IsEnum)
                         if (value != null)
                             value = (int)value;
                     dr[prop.Name] = value ?? DBNull.Value;
