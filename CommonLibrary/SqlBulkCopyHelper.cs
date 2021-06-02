@@ -46,7 +46,7 @@ namespace MSTest
                 {
                     var insertTasks = insertTables.Select(async o =>
                     {
-                        var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
+                        var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 600 };
                         sqlBulkCopyList.Add(sqlbulkcopy);
                         sqlbulkcopy.DestinationTableName = o.TableName;
                         foreach (DataColumn item in o.Columns)
@@ -92,7 +92,7 @@ namespace MSTest
             {
                 conn.Open();
                 SqlTransaction tran = conn.BeginTransaction();//开启事务
-                using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = 60 })
+                using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = 600 })
                 {
                     var sqlBulkCopyList = new List<SqlBulkCopy>();
                     try
@@ -109,7 +109,7 @@ namespace MSTest
                         var updateTasks = updateTables.Select(async o =>
                         {
                             var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
-                            var sqlBulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
+                            var sqlBulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 600 };
                             sqlBulkCopyList.Add(sqlBulkcopy);
                             sqlBulkcopy.DestinationTableName = tempTablePre + bulkTable.TableName + tempTableSuf;
                             foreach (var item in bulkTable.TableFields)
@@ -171,7 +171,7 @@ namespace MSTest
                 conn.Open();
                 SqlTransaction tran = conn.BeginTransaction();//开启事务
 
-                using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = 60 })
+                using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = 600 })
                 {
                     var sqlBulkCopyList = new List<SqlBulkCopy>();
                     try
@@ -186,7 +186,7 @@ namespace MSTest
 
                         var insertTasks = insertTables.Select(async o =>
                         {
-                            var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
+                            var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 600 };
                             sqlBulkCopyList.Add(sqlbulkcopy);
                             sqlbulkcopy.DestinationTableName = o.TableName;
                             foreach (DataColumn item in o.Columns) sqlbulkcopy.ColumnMappings.Add(item.ColumnName, item.ColumnName);
@@ -197,7 +197,7 @@ namespace MSTest
                         var updateTasks = updateTables.Select(async o =>
                         {
                             var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
-                            var sqlBulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 60 };
+                            var sqlBulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 600 };
                             sqlBulkCopyList.Add(sqlBulkcopy);
                             sqlBulkcopy.DestinationTableName = tempTablePre + bulkTable.TableName + tempTableSuf;
                             foreach (var item in bulkTable.TableFields)
@@ -594,7 +594,7 @@ THEN UPDATE SET T.[DisabilityCardId]=S.[DisabilityCardId],T.[PartId]=S.[PartId],
                         }
 
                         // 执行Command命令 使用临时表的数据去更新目标表中的数据  然后删除临时表
-                        command.CommandTimeout = 300;
+                        command.CommandTimeout = 600;
                         command.CommandText = updateSql;
                         command.ExecuteNonQuery();
                     }
