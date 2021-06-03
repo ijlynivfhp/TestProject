@@ -102,12 +102,11 @@ namespace MSTest
                         updateTables.ForEach(o =>
                         {
                             var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
-                            cmd.CommandText += string.Format(@"SELECT A.* into {0} from {1} A WHERE 1=2;", tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.TableName);
                             foreach (DataColumn item in o.Columns) bulkTable.TableFields.Add(item.ColumnName);
+                            cmd.CommandText = string.Format(@"SELECT A.* into {0} from {1} A WHERE 1=2;", tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.TableName);
+                            cmd.ExecuteNonQuery();
                         });
-                        cmd.ExecuteNonQuery();
 
-                        cmd.CommandText = default;
                         updateTables.ForEach(o =>
                         {
                             var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
@@ -126,10 +125,12 @@ namespace MSTest
                             {
                                 foreach (var column in bulkTable.TableFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
                             }
-                            cmd.CommandText += string.Format(@"UPDATE A SET {0} FROM dbo.{1} A INNER JOIN {2} B ON A.{3}=B.{3};", tempSql.ToString().Trim(','), bulkTable.TableName, tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.Primary);
+                            cmd.CommandText = string.Format(@"UPDATE A SET {0} FROM {1} A INNER JOIN {2} B ON A.{3}=B.{3};
+                                if object_id('tempdb..{2}') is not null Begin
+                                drop table {2}
+                                End;", tempSql.ToString().Trim(','), bulkTable.TableName, tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.Primary);
+                            cmd.ExecuteNonQuery();
                         });
-                        cmd.ExecuteNonQuery();
-
                         tran.Commit();
                     }
                     catch (Exception ex)
@@ -138,16 +139,6 @@ namespace MSTest
                     }
                     finally
                     {
-                        var dropTempSql = new StringBuilder();
-                        bulkTables.ForEach(o =>
-                        {
-                            dropTempSql.AppendLine(string.Format(@"if object_id('tempdb..{0}') is not null Begin
-                            drop table {0}
-                            End;", tempTablePre + o.TableName + tempTableSuf));
-                        });
-                        cmd.CommandText = dropTempSql.ToString();
-                        cmd.ExecuteNonQuery();
-
                         sqlbulkcopy.Close();
                         tran.Dispose();
                     }
