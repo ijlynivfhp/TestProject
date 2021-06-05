@@ -79,6 +79,7 @@ namespace MSTest
         /// <returns></returns>
         public static string BulkUpdateTables(List<BulkTable> bulkTables)
         {
+            var tableFieldsDict = new Dictionary<string, List<string>>();
             var updateTables = bulkTables.Select(o => o.Table).ToList();
 
             foreach (var item in bulkTables)
@@ -102,34 +103,30 @@ namespace MSTest
                     {
                         updateTables.ForEach(o =>
                         {
+                            var tableFields = new List<string>();
                             var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
                             cmd.CommandText += string.Format(@"SELECT A.* into {0} from {1} A WHERE 1=2;", tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.TableName);
-                            foreach (DataColumn item in o.Columns) bulkTable.TableFields.Add(item.ColumnName);
+                            foreach (DataColumn item in o.Columns) tableFields.Add(item.ColumnName);
+                            tableFieldsDict.Add(o.TableName, tableFields);
                         });
                         cmd.ExecuteNonQuery();
 
                         updateTables.ForEach(o =>
                         {
+                            var tableFields = tableFieldsDict[o.TableName];
                             var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
                             sqlbulkcopy.ColumnMappings.Clear();
                             sqlbulkcopy.DestinationTableName = tempTablePre + bulkTable.TableName + tempTableSuf;
-                            bulkTable.TableFields.ForEach(p =>
-                            {
-                                sqlbulkcopy.ColumnMappings.Add(p, p);
-                            });
+                            foreach (var item in tableFields) sqlbulkcopy.ColumnMappings.Add(item, item);
                             sqlbulkcopy.WriteToServer(o);
 
                             var tempSql = new StringBuilder();
                             if (bulkTable.UpdateFields.Count > 0)
                                 foreach (var column in bulkTable.UpdateFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
                             else
-                            {
-                                foreach (var column in bulkTable.TableFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
-                            }
-                            cmd.CommandText = string.Format(@"UPDATE A SET {0} FROM {1} A INNER JOIN {2} B ON A.{3}=B.{3};
-                                if object_id('tempdb..{2}') is not null Begin
-                                drop table {2}
-                                End;", tempSql.ToString().Trim(','), bulkTable.TableName, tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.Primary);
+                                foreach (var column in tableFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
+                            cmd.CommandText = string.Format(@"UPDATE A SET {0} FROM {1} A INNER JOIN {2} B ON A.{3}=B.{3};drop table {2};",
+                                tempSql.ToString().Trim(','), bulkTable.TableName, tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.Primary);
                             cmd.ExecuteNonQuery();
                         });
 
@@ -156,6 +153,7 @@ namespace MSTest
         /// <returns></returns>
         public static string BulkEditTables(List<DataTable> insertTables, List<BulkTable> bulkTables)
         {
+            var tableFieldsDict = new Dictionary<string, List<string>>();
             var updateTables = bulkTables.Select(o => o.Table).ToList();
             foreach (var item in bulkTables)
                 if (string.IsNullOrEmpty(item.TableName))
@@ -178,9 +176,11 @@ namespace MSTest
                     {
                         updateTables.ForEach(o =>
                         {
+                            var tableFields = new List<string>();
                             var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
                             cmd.CommandText += string.Format(@"SELECT A.* into {0} from {1} A WHERE 1=2;", tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.TableName);
-                            foreach (DataColumn item in o.Columns) bulkTable.TableFields.Add(item.ColumnName);
+                            foreach (DataColumn item in o.Columns) tableFields.Add(item.ColumnName);
+                            tableFieldsDict.Add(o.TableName, tableFields);
                         });
                         cmd.ExecuteNonQuery();
 
@@ -194,26 +194,20 @@ namespace MSTest
 
                         updateTables.ForEach(o =>
                         {
+                            var tableFields = tableFieldsDict[o.TableName];
                             var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
                             sqlbulkcopy.ColumnMappings.Clear();
                             sqlbulkcopy.DestinationTableName = tempTablePre + bulkTable.TableName + tempTableSuf;
-                            bulkTable.TableFields.ForEach(p =>
-                            {
-                                sqlbulkcopy.ColumnMappings.Add(p, p);
-                            });
+                            foreach (var item in tableFields) sqlbulkcopy.ColumnMappings.Add(item, item);
                             sqlbulkcopy.WriteToServer(o);
 
                             var tempSql = new StringBuilder();
                             if (bulkTable.UpdateFields.Count > 0)
                                 foreach (var column in bulkTable.UpdateFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
                             else
-                            {
-                                foreach (var column in bulkTable.TableFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
-                            }
-                            cmd.CommandText = string.Format(@"UPDATE A SET {0} FROM {1} A INNER JOIN {2} B ON A.{3}=B.{3};
-                                if object_id('tempdb..{2}') is not null Begin
-                                drop table {2}
-                                End;", tempSql.ToString().Trim(','), bulkTable.TableName, tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.Primary);
+                                foreach (var column in tableFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
+                            cmd.CommandText = string.Format(@"UPDATE A SET {0} FROM {1} A INNER JOIN {2} B ON A.{3}=B.{3};drop table {2};",
+                                tempSql.ToString().Trim(','), bulkTable.TableName, tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.Primary);
                             cmd.ExecuteNonQuery();
                         });
 
