@@ -81,13 +81,14 @@ namespace MSTest
         {
             Dictionary<string, List<string>> insertFieldsDict = new Dictionary<string, List<string>>(),
                 updateFieldsDict = new Dictionary<string, List<string>>();
-
+            if (primaryFieldsDict == default)
+                primaryFieldsDict = new Dictionary<string, List<string>>();
             foreach (var item in updateTables)
             {
                 List<string> insertFields = new List<string>(),
                     primaryFields = new List<string>(),
                     updateFields = new List<string>();
-                if (primaryFieldsDict == default)
+                if (!primaryFieldsDict.Keys.Contains(item.TableName))
                 {
                     var dt = SqlCoreHelper.ExecuteDataSetText(string.Format(@"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME='{0}'", item.TableName), null).Tables[0];
                     foreach (DataRow dr in dt.Rows)
@@ -173,13 +174,14 @@ namespace MSTest
         {
             Dictionary<string, List<string>> insertFieldsDict = new Dictionary<string, List<string>>(),
                 updateFieldsDict = new Dictionary<string, List<string>>();
-
+            if (primaryFieldsDict == default)
+                primaryFieldsDict = new Dictionary<string, List<string>>();
             foreach (var item in updateTables)
             {
                 List<string> insertFields = new List<string>(),
                     primaryFields = new List<string>(),
                     updateFields = new List<string>();
-                if (primaryFieldsDict == default)
+                if (!primaryFieldsDict.Keys.Contains(item.TableName))
                 {
                     var dt = SqlCoreHelper.ExecuteDataSetText(string.Format(@"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME='{0}'", item.TableName), null).Tables[0];
                     foreach (DataRow dr in dt.Rows)
