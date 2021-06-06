@@ -77,10 +77,9 @@ namespace MSTest
         /// </summary>
         /// <param name="bulkTables"></param>
         /// <returns></returns>
-        public static string BulkUpdateTables(List<DataTable> updateTables)
+        public static string BulkUpdateTables(List<DataTable> updateTables, Dictionary<string, List<string>> primaryFieldsDict = default)
         {
             Dictionary<string, List<string>> insertFieldsDict = new Dictionary<string, List<string>>(),
-                primaryFieldsDict = new Dictionary<string, List<string>>(),
                 updateFieldsDict = new Dictionary<string, List<string>>();
 
             foreach (var item in updateTables)
@@ -88,10 +87,13 @@ namespace MSTest
                 List<string> insertFields = new List<string>(),
                     primaryFields = new List<string>(),
                     updateFields = new List<string>();
-                var dt = SqlCoreHelper.ExecuteDataSetText(string.Format(@"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME='{0}'", item.TableName), null).Tables[0];
-                foreach (DataRow dr in dt.Rows)
-                    primaryFields.Add(dr[0].ToString());
-                primaryFieldsDict.Add(item.TableName, primaryFields);
+                if (primaryFieldsDict == default)
+                {
+                    var dt = SqlCoreHelper.ExecuteDataSetText(string.Format(@"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME='{0}'", item.TableName), null).Tables[0];
+                    foreach (DataRow dr in dt.Rows)
+                        primaryFields.Add(dr[0].ToString());
+                    primaryFieldsDict.Add(item.TableName, primaryFields);
+                }
                 foreach (DataColumn column in item.Columns)
                 {
                     insertFields.Add(column.ColumnName);
@@ -167,10 +169,9 @@ namespace MSTest
         /// </summary>
         /// <param name="bulkTables"></param>
         /// <returns></returns>
-        public static string BulkEditTables(List<DataTable> insertTables, List<DataTable> updateTables)
+        public static string BulkEditTables(List<DataTable> insertTables, List<DataTable> updateTables, Dictionary<string, List<string>> primaryFieldsDict = default)
         {
             Dictionary<string, List<string>> insertFieldsDict = new Dictionary<string, List<string>>(),
-                primaryFieldsDict = new Dictionary<string, List<string>>(),
                 updateFieldsDict = new Dictionary<string, List<string>>();
 
             foreach (var item in updateTables)
@@ -178,10 +179,13 @@ namespace MSTest
                 List<string> insertFields = new List<string>(),
                     primaryFields = new List<string>(),
                     updateFields = new List<string>();
-                var dt = SqlCoreHelper.ExecuteDataSetText(string.Format(@"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME='{0}'", item.TableName), null).Tables[0];
-                foreach (DataRow dr in dt.Rows)
-                    primaryFields.Add(dr[0].ToString());
-                primaryFieldsDict.Add(item.TableName, primaryFields);
+                if (primaryFieldsDict == default)
+                {
+                    var dt = SqlCoreHelper.ExecuteDataSetText(string.Format(@"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME='{0}'", item.TableName), null).Tables[0];
+                    foreach (DataRow dr in dt.Rows)
+                        primaryFields.Add(dr[0].ToString());
+                    primaryFieldsDict.Add(item.TableName, primaryFields);
+                }
                 foreach (DataColumn column in item.Columns)
                 {
                     insertFields.Add(column.ColumnName);
