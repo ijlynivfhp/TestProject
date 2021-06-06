@@ -50,7 +50,7 @@ namespace MSTest
             tableTwo.TableName = "BulkTestTwo";
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            var task = SqlBulkCopyHelper.BulkUpdateTables(new List<BulkTable>() { new BulkTable() { Table = table }, new BulkTable() { Table = tableTwo } });
+            var task = SqlBulkCopyHelper.BulkUpdateTables(new List<DataTable>() { table, tableTwo });
             task.Wait();
             sw.Stop();
             string bb = sw.Elapsed.TotalSeconds.ToString();
@@ -78,7 +78,7 @@ namespace MSTest
             tableTwoUpdate.TableName = "BulkTestTwo";
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            var task = SqlBulkCopyHelper.BulkEditTables(new List<DataTable>() { table, tableTwo }, new List<BulkTable>() { new BulkTable() { Table = tableUpdate }, new BulkTable() { Table = tableTwoUpdate } });
+            var task = SqlBulkCopyHelper.BulkEditTables(new List<DataTable>() { table, tableTwo }, new List<DataTable>() { tableUpdate, tableTwoUpdate });
             task.Wait();
             sw.Stop();
             string bb = sw.Elapsed.TotalSeconds.ToString();
