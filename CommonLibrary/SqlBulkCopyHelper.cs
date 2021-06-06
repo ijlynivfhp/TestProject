@@ -284,7 +284,10 @@ namespace MSTest
             var mappingProps = new List<PropertyInfo>();
             var props = modelType.GetProperties();
             if (tableFields != default)
+            {
                 columns = columns.Where(o => tableFields.Contains(o.Name)).ToList();
+                props = props.Where(o => tableFields.Contains(o.Name)).ToArray();
+            }
             for (int i = 0; i < columns.Count; i++)
             {
                 var column = columns[i];
