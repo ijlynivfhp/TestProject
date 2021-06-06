@@ -77,20 +77,32 @@ namespace MSTest
         /// </summary>
         /// <param name="bulkTables"></param>
         /// <returns></returns>
-        public static string BulkUpdateTables(List<BulkTable> bulkTables)
+        public static string BulkUpdateTables(List<DataTable> updateTables)
         {
-            var tableFieldsDict = new Dictionary<string, List<string>>();
-            var updateTables = bulkTables.Select(o => o.Table).ToList();
+            Dictionary<string, List<string>> insertFieldsDict = new Dictionary<string, List<string>>(),
+                primaryFieldsDict = new Dictionary<string, List<string>>(),
+                updateFieldsDict = new Dictionary<string, List<string>>();
 
-            foreach (var item in bulkTables)
-                if (string.IsNullOrEmpty(item.TableName))
-                    item.TableName = item.Table.TableName;
-
-            foreach (var item in bulkTables)
-                item.UpdateFields = item.UpdateFields.Except(item.RemoveFields).ToList();
+            foreach (var item in updateTables)
+            {
+                List<string> insertFields = new List<string>(),
+                    primaryFields = new List<string>(),
+                    updateFields = new List<string>();
+                var dt = SqlCoreHelper.ExecuteDataSetText(string.Format(@"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME='{0}'", item.TableName), null).Tables[0];
+                foreach (DataRow dr in dt.Rows)
+                    primaryFields.Add(dr[0].ToString());
+                primaryFieldsDict.Add(item.TableName, primaryFields);
+                foreach (DataColumn column in item.Columns)
+                {
+                    insertFields.Add(column.ColumnName);
+                    if (!primaryFields.Contains(column.ColumnName))
+                        updateFields.Add(column.ColumnName);
+                }
+                insertFieldsDict.Add(item.TableName, insertFields);
+                updateFieldsDict.Add(item.TableName, updateFields);
+            }
 
             var tempTableSuf = DateTime.Now.ToString("yyyyMMddHHmmss");
-            Func<DataTable, BulkTable, bool> func = (o, p) => o.TableName == p.TableName;
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
@@ -103,30 +115,34 @@ namespace MSTest
                     {
                         updateTables.ForEach(o =>
                         {
-                            var tableFields = new List<string>();
-                            var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
-                            cmd.CommandText += string.Format(@"SELECT A.* into {0} from {1} A WHERE 1=2;", tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.TableName);
-                            foreach (DataColumn item in o.Columns) tableFields.Add(item.ColumnName);
-                            tableFieldsDict.Add(o.TableName, tableFields);
+                            var insertFields = insertFieldsDict[o.TableName];
+                            cmd.CommandText += string.Format(@"SELECT {0} into {1} from {2} A WHERE 1=2;", string.Join(',', insertFields.Select(p => "A." + p)), tempTablePre + o.TableName + tempTableSuf, o.TableName);
                         });
                         cmd.ExecuteNonQuery();
 
                         updateTables.ForEach(o =>
                         {
-                            var tableFields = tableFieldsDict[o.TableName];
-                            var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
+                            var insertFields = insertFieldsDict[o.TableName];
+                            var primarFields = primaryFieldsDict[o.TableName];
+                            var updateFields = updateFieldsDict[o.TableName];
                             sqlbulkcopy.ColumnMappings.Clear();
-                            sqlbulkcopy.DestinationTableName = tempTablePre + bulkTable.TableName + tempTableSuf;
-                            foreach (var item in tableFields) sqlbulkcopy.ColumnMappings.Add(item, item);
+                            sqlbulkcopy.DestinationTableName = tempTablePre + o.TableName + tempTableSuf;
+                            foreach (var item in insertFields) sqlbulkcopy.ColumnMappings.Add(item, item);
                             sqlbulkcopy.WriteToServer(o);
 
-                            var tempSql = new StringBuilder();
-                            if (bulkTable.UpdateFields.Count > 0)
-                                foreach (var column in bulkTable.UpdateFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
-                            else
-                                foreach (var column in tableFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
+                            StringBuilder updateSql = new StringBuilder(), onSql = new StringBuilder();
+                            foreach (var column in insertFields) updateSql.Append(string.Format(@"A.{0} = B.{0},", column));
+                            foreach (var column in primarFields)
+                            {
+                                if (primarFields.IndexOf(column) == primarFields.Count - 1)
+                                    onSql.Append(string.Format(@"A.{0} = B.{0}", column));
+                                else
+                                {
+                                    onSql.Append(string.Format(@"A.{0} = B.{0} And,", column));
+                                }
+                            }
                             cmd.CommandText = string.Format(@"UPDATE A SET {0} FROM {1} A INNER JOIN {2} B ON {3};drop table {2};",
-                                tempSql.ToString().Trim(','), bulkTable.TableName, tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.Primary);
+                                updateSql.ToString().Trim(','), o.TableName, tempTablePre + o.TableName + tempTableSuf, onSql.ToString());
                             cmd.ExecuteNonQuery();
                         });
 
@@ -151,19 +167,32 @@ namespace MSTest
         /// </summary>
         /// <param name="bulkTables"></param>
         /// <returns></returns>
-        public static string BulkEditTables(List<DataTable> insertTables, List<BulkTable> bulkTables)
+        public static string BulkEditTables(List<DataTable> insertTables, List<DataTable> updateTables)
         {
-            var tableFieldsDict = new Dictionary<string, List<string>>();
-            var updateTables = bulkTables.Select(o => o.Table).ToList();
-            foreach (var item in bulkTables)
-                if (string.IsNullOrEmpty(item.TableName))
-                    item.TableName = item.Table.TableName;
+            Dictionary<string, List<string>> insertFieldsDict = new Dictionary<string, List<string>>(),
+                primaryFieldsDict = new Dictionary<string, List<string>>(),
+                updateFieldsDict = new Dictionary<string, List<string>>();
 
-            foreach (var item in bulkTables)
-                item.UpdateFields = item.UpdateFields.Except(item.RemoveFields).ToList();
+            foreach (var item in updateTables)
+            {
+                List<string> insertFields = new List<string>(),
+                    primaryFields = new List<string>(),
+                    updateFields = new List<string>();
+                var dt = SqlCoreHelper.ExecuteDataSetText(string.Format(@"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME='{0}'", item.TableName), null).Tables[0];
+                foreach (DataRow dr in dt.Rows)
+                    primaryFields.Add(dr[0].ToString());
+                primaryFieldsDict.Add(item.TableName, primaryFields);
+                foreach (DataColumn column in item.Columns)
+                {
+                    insertFields.Add(column.ColumnName);
+                    if (!primaryFields.Contains(column.ColumnName))
+                        updateFields.Add(column.ColumnName);
+                }
+                insertFieldsDict.Add(item.TableName, insertFields);
+                updateFieldsDict.Add(item.TableName, updateFields);
+            }
 
             var tempTableSuf = DateTime.Now.ToString("yyyyMMddHHmmss");
-            Func<DataTable, BulkTable, bool> func = (o, p) => o.TableName == p.TableName;
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
@@ -176,11 +205,8 @@ namespace MSTest
                     {
                         updateTables.ForEach(o =>
                         {
-                            var tableFields = new List<string>();
-                            var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
-                            cmd.CommandText += string.Format(@"SELECT A.* into {0} from {1} A WHERE 1=2;", tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.TableName);
-                            foreach (DataColumn item in o.Columns) tableFields.Add(item.ColumnName);
-                            tableFieldsDict.Add(o.TableName, tableFields);
+                            var insertFields = insertFieldsDict[o.TableName];
+                            cmd.CommandText += string.Format(@"SELECT {0} into {1} from {2} A WHERE 1=2;", string.Join(',', insertFields.Select(p => "A." + p)), tempTablePre + o.TableName + tempTableSuf, o.TableName);
                         });
                         cmd.ExecuteNonQuery();
 
@@ -194,20 +220,27 @@ namespace MSTest
 
                         updateTables.ForEach(o =>
                         {
-                            var tableFields = tableFieldsDict[o.TableName];
-                            var bulkTable = bulkTables.FirstOrDefault(p => func(o, p));
+                            var insertFields = insertFieldsDict[o.TableName];
+                            var primarFields = primaryFieldsDict[o.TableName];
+                            var updateFields = updateFieldsDict[o.TableName];
                             sqlbulkcopy.ColumnMappings.Clear();
-                            sqlbulkcopy.DestinationTableName = tempTablePre + bulkTable.TableName + tempTableSuf;
-                            foreach (var item in tableFields) sqlbulkcopy.ColumnMappings.Add(item, item);
+                            sqlbulkcopy.DestinationTableName = tempTablePre + o.TableName + tempTableSuf;
+                            foreach (var item in insertFields) sqlbulkcopy.ColumnMappings.Add(item, item);
                             sqlbulkcopy.WriteToServer(o);
 
-                            var tempSql = new StringBuilder();
-                            if (bulkTable.UpdateFields.Count > 0)
-                                foreach (var column in bulkTable.UpdateFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
-                            else
-                                foreach (var column in tableFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
+                            StringBuilder updateSql = new StringBuilder(), onSql = new StringBuilder();
+                            foreach (var column in insertFields) updateSql.Append(string.Format(@"A.{0} = B.{0},", column));
+                            foreach (var column in primarFields)
+                            {
+                                if (primarFields.IndexOf(column) == primarFields.Count - 1)
+                                    onSql.Append(string.Format(@"A.{0} = B.{0}", column));
+                                else
+                                {
+                                    onSql.Append(string.Format(@"A.{0} = B.{0} And,", column));
+                                }
+                            }
                             cmd.CommandText = string.Format(@"UPDATE A SET {0} FROM {1} A INNER JOIN {2} B ON {3};drop table {2};",
-                                tempSql.ToString().Trim(','), bulkTable.TableName, tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.Primary);
+                                updateSql.ToString().Trim(','), o.TableName, tempTablePre + o.TableName + tempTableSuf, onSql.ToString());
                             cmd.ExecuteNonQuery();
                         });
 

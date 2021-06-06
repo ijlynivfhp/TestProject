@@ -11,9 +11,5 @@ namespace DTO
     {
         public DataTable Table { get; set; }
         public string TableName { get; set; }
-        public string Primary { get; set; } = "A.Id=B.Id";
-        public List<string> UpdateFields { get; set; } = new List<string>();
-        public List<string> RemoveFields { get; set; } = new List<string>();
-
     }
 }

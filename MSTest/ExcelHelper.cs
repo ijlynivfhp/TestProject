@@ -35,21 +35,21 @@ namespace MSTest
         [TestMethod]
         public void DataUpdate()
         {
-            var table = SqlCoreHelper.ExecuteDataSetText("select * from BulkTest", null).Tables[0];
-            var tableTwo = SqlCoreHelper.ExecuteDataSetText("select * from BulkTestTwo", null).Tables[0];
+            var table = SqlCoreHelper.ExecuteDataSetText("select Id,FieldD from BulkTest", null).Tables[0];
+            var tableTwo = SqlCoreHelper.ExecuteDataSetText("select Id,FieldD from BulkTestTwo", null).Tables[0];
             foreach (DataRow item in table.Rows)
             {
-                item["FieldD"] = "1111";
+                item["FieldD"] = "111";
             }
             foreach (DataRow item in tableTwo.Rows)
             {
-                item["FieldD"] = "2222";
+                item["FieldD"] = "222";
             }
             table.TableName = "BulkTest";
             tableTwo.TableName = "BulkTestTwo";
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            SqlBulkCopyHelper.BulkUpdateTables(new List<BulkTable>() { new BulkTable() { Table = table }, new BulkTable() { Table = tableTwo } });
+            SqlBulkCopyHelper.BulkUpdateTables(new List<DataTable>() { table, tableTwo });
             sw.Stop();
             string bb = sw.Elapsed.TotalSeconds.ToString();
             Console.WriteLine(bb);
@@ -66,17 +66,17 @@ namespace MSTest
             var tableTwoUpdate = SqlCoreHelper.ExecuteDataSetText("select top 5000 * from BulkTestTwo order by FieldU asc", null).Tables[0];
             foreach (DataRow item in tableUpdate.Rows)
             {
-                item["FieldD"] = "5555";
+                item["FieldD"] = "555";
             }
             foreach (DataRow item in tableTwoUpdate.Rows)
             {
-                item["FieldD"] = "6666";
+                item["FieldD"] = "666";
             }
             tableUpdate.TableName = "BulkTest";
             tableTwoUpdate.TableName = "BulkTestTwo";
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            SqlBulkCopyHelper.BulkEditTables(new List<DataTable>() { table, tableTwo }, new List<BulkTable>() { new BulkTable() { Table = tableUpdate }, new BulkTable() { Table = tableTwoUpdate } });
+            SqlBulkCopyHelper.BulkEditTables(new List<DataTable>() { table, tableTwo }, new List<DataTable>() { tableUpdate, tableTwoUpdate });
             sw.Stop();
             string bb = sw.Elapsed.TotalSeconds.ToString();
             Console.WriteLine(bb);
