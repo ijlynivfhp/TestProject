@@ -274,7 +274,7 @@ namespace MSTest
         /// <param name="modelList"></param>
         /// <param name="tableName"></param>
         /// <returns></returns>
-        public static DataTable ListToTable<TModel>(List<TModel> modelList, string tableName = "")
+        public static DataTable ListToTable<TModel>(List<TModel> modelList, string tableName = "", List<string> tableFields = default)
         {
             Type modelType = typeof(TModel);
             if (string.IsNullOrEmpty(tableName))
@@ -282,8 +282,9 @@ namespace MSTest
             DataTable dt = new DataTable(tableName);
             var columns = GetTableColumns(tableName);
             var mappingProps = new List<PropertyInfo>();
-
             var props = modelType.GetProperties();
+            if (tableFields != default)
+                columns = columns.Where(o => tableFields.Contains(o.Name)).ToList();
             for (int i = 0; i < columns.Count; i++)
             {
                 var column = columns[i];
@@ -321,9 +322,6 @@ namespace MSTest
                 }
                 dt.Columns.Add(dataColumn);
             }
-
-            var mappingPropsNames = mappingProps.Select(o => o.Name).ToList();
-            columns.RemoveAll(o => mappingPropsNames.Contains(o.Name));
 
             foreach (var model in modelList)
             {
