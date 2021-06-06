@@ -237,7 +237,7 @@ namespace MSTest
                             }
                             cmd.CommandText += string.Format(@"UPDATE A SET {0} FROM {1} A INNER JOIN {2} B ON {3};drop table {2};", updateSql.ToString().Trim(','), o.TableName, tempTablePre + o.TableName + tempTableSuf, onSql.ToString());
                         });
-                        await Task.WhenAll(insertTasks.Concat(updateTasks));
+                        await Task.WhenAll(updateTasks.Concat(insertTasks));
                         await cmd.ExecuteNonQueryAsync();
                     }
                     catch (Exception ex)
