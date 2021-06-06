@@ -125,7 +125,7 @@ namespace MSTest
                                 foreach (var column in bulkTable.UpdateFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
                             else
                                 foreach (var column in tableFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
-                            cmd.CommandText = string.Format(@"UPDATE A SET {0} FROM {1} A INNER JOIN {2} B ON A.{3}=B.{3};drop table {2};",
+                            cmd.CommandText = string.Format(@"UPDATE A SET {0} FROM {1} A INNER JOIN {2} B ON {3};drop table {2};",
                                 tempSql.ToString().Trim(','), bulkTable.TableName, tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.Primary);
                             cmd.ExecuteNonQuery();
                         });
@@ -206,7 +206,7 @@ namespace MSTest
                                 foreach (var column in bulkTable.UpdateFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
                             else
                                 foreach (var column in tableFields) tempSql.Append(string.Format(@"A.{0} = B.{0},", column));
-                            cmd.CommandText = string.Format(@"UPDATE A SET {0} FROM {1} A INNER JOIN {2} B ON A.{3}=B.{3};drop table {2};",
+                            cmd.CommandText = string.Format(@"UPDATE A SET {0} FROM {1} A INNER JOIN {2} B ON {3};drop table {2};",
                                 tempSql.ToString().Trim(','), bulkTable.TableName, tempTablePre + bulkTable.TableName + tempTableSuf, bulkTable.Primary);
                             cmd.ExecuteNonQuery();
                         });
