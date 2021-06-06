@@ -40,7 +40,7 @@ namespace MSTest
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
-                SqlTransaction tran = conn.BeginTransaction();//开启事务
+                var tran = conn.BeginTransaction();//开启事务
                 var sqlBulkCopyList = new List<SqlBulkCopy>();
                 try
                 {
@@ -107,7 +107,7 @@ namespace MSTest
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
-                SqlTransaction tran = conn.BeginTransaction();//开启事务
+                var tran = conn.BeginTransaction();//开启事务
                 using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = 600 })
                 {
                     var sqlBulkCopyList = new List<SqlBulkCopy>();
@@ -201,8 +201,7 @@ namespace MSTest
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
-                SqlTransaction tran = conn.BeginTransaction();//开启事务
-
+                var tran = conn.BeginTransaction();//开启事务
                 using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = 600 })
                 {
                     var sqlBulkCopyList = new List<SqlBulkCopy>();
