@@ -42,6 +42,7 @@ namespace MSTest
                 conn.Open();
                 var tran = conn.BeginTransaction();//开启事务
                 var sqlBulkCopyList = new List<SqlBulkCopy>();
+
                 try
                 {
                     var insertTasks = insertTables.Select(async o =>
@@ -108,6 +109,7 @@ namespace MSTest
             {
                 conn.Open();
                 var tran = conn.BeginTransaction();//开启事务
+
                 using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = 600 })
                 {
                     var sqlBulkCopyList = new List<SqlBulkCopy>();
@@ -202,6 +204,7 @@ namespace MSTest
             {
                 conn.Open();
                 var tran = conn.BeginTransaction();//开启事务
+
                 using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = 600 })
                 {
                     var sqlBulkCopyList = new List<SqlBulkCopy>();
