@@ -36,8 +36,8 @@ namespace MSTest
         [TestMethod]
         public void DataUpdate()
         {
-            var table = SqlCoreHelper.ExecuteDataSetText("select * from BulkTest", null).Tables[0];
-            var tableTwo = SqlCoreHelper.ExecuteDataSetText("select * from BulkTestTwo", null).Tables[0];
+            var table = SqlCoreHelper.ExecuteDataSetText("select Id,FieldD from BulkTest", null).Tables[0];
+            var tableTwo = SqlCoreHelper.ExecuteDataSetText("select Id,FieldD from BulkTestTwo", null).Tables[0];
             foreach (DataRow item in table.Rows)
             {
                 item["FieldD"] = "222";
@@ -64,8 +64,8 @@ namespace MSTest
             var table = SqlBulkCopyHelper.ListToTable(dataList, "BulkTest");
             var tableTwo = SqlBulkCopyHelper.ListToTable(dataListTwo, "BulkTestTwo");
 
-            var tableUpdate = SqlCoreHelper.ExecuteDataSetText("select top 5000 * from BulkTest order by FieldU asc", null).Tables[0];
-            var tableTwoUpdate = SqlCoreHelper.ExecuteDataSetText("select top 5000 * from BulkTestTwo order by FieldU asc", null).Tables[0];
+            var tableUpdate = SqlCoreHelper.ExecuteDataSetText("select top 5000 Id,FieldD from BulkTest order by FieldU asc", null).Tables[0];
+            var tableTwoUpdate = SqlCoreHelper.ExecuteDataSetText("select top 5000 Id,FieldD from BulkTestTwo order by FieldU asc", null).Tables[0];
             foreach (DataRow item in tableUpdate.Rows)
             {
                 item["FieldD"] = "5555";

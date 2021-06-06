@@ -133,7 +133,7 @@ namespace MSTest
                             await sqlBulkcopy.WriteToServerAsync(o);
 
                             StringBuilder updateSql = new StringBuilder(), onSql = new StringBuilder();
-                            foreach (var column in insertFields) updateSql.Append(string.Format(@"A.{0} = B.{0},", column));
+                            foreach (var column in updateFields) updateSql.Append(string.Format(@"A.{0} = B.{0},", column));
                             foreach (var column in primarFields)
                             {
                                 if (primarFields.IndexOf(column) == primarFields.Count - 1)
@@ -237,7 +237,7 @@ namespace MSTest
                             await sqlBulkcopy.WriteToServerAsync(o);
 
                             StringBuilder updateSql = new StringBuilder(), onSql = new StringBuilder();
-                            foreach (var column in insertFields) updateSql.Append(string.Format(@"A.{0} = B.{0},", column));
+                            foreach (var column in updateFields) updateSql.Append(string.Format(@"A.{0} = B.{0},", column));
                             foreach (var column in primarFields)
                             {
                                 if (primarFields.IndexOf(column) == primarFields.Count - 1)
@@ -277,7 +277,7 @@ namespace MSTest
         /// <param name="modelList"></param>
         /// <param name="tableName"></param>
         /// <returns></returns>
-        public static DataTable ListToTable<TModel>(List<TModel> modelList, string tableName = "", List<string> tableFields = default)
+        public static DataTable ListToTable<TModel>(List<TModel> modelList, string tableName = default, List<string> tableFields = default)
         {
             Type modelType = typeof(TModel);
             if (string.IsNullOrEmpty(tableName))
