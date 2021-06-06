@@ -134,7 +134,7 @@ namespace MSTest
                             sqlbulkcopy.WriteToServer(o);
 
                             StringBuilder updateSql = new StringBuilder(), onSql = new StringBuilder();
-                            foreach (var column in insertFields) updateSql.Append(string.Format(@"A.{0} = B.{0},", column));
+                            foreach (var column in updateFields) updateSql.Append(string.Format(@"A.{0} = B.{0},", column));
                             foreach (var column in primarFields)
                             {
                                 if (primarFields.IndexOf(column) == primarFields.Count - 1)
@@ -235,7 +235,7 @@ namespace MSTest
                             sqlbulkcopy.WriteToServer(o);
 
                             StringBuilder updateSql = new StringBuilder(), onSql = new StringBuilder();
-                            foreach (var column in insertFields) updateSql.Append(string.Format(@"A.{0} = B.{0},", column));
+                            foreach (var column in updateFields) updateSql.Append(string.Format(@"A.{0} = B.{0},", column));
                             foreach (var column in primarFields)
                             {
                                 if (primarFields.IndexOf(column) == primarFields.Count - 1)
