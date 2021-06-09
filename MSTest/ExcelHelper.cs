@@ -21,8 +21,8 @@ namespace MSTest
         [TestMethod]
         public void DataInsert()
         {
-            var dataList = CommonHelper.GetTestListDto(5000);
-            var dataListTwo = CommonHelper.GetTestListDtoTwo(5000);
+            var dataList = CommonHelper.GetTestListDto(500000);
+            var dataListTwo = CommonHelper.GetTestListDtoTwo(500000);
             var table = SqlBulkCopyHelper.ListToTable(dataList, "BulkTest");
             var tableTwo = SqlBulkCopyHelper.ListToTable(dataListTwo, "BulkTestTwo");
             Stopwatch sw = new Stopwatch();
@@ -59,13 +59,13 @@ namespace MSTest
         [TestMethod]
         public void DataEdit()
         {
-            var dataList = CommonHelper.GetTestListDto(5000);
-            var dataListTwo = CommonHelper.GetTestListDtoTwo(5000);
+            var dataList = CommonHelper.GetTestListDto(500000);
+            var dataListTwo = CommonHelper.GetTestListDtoTwo(500000);
             var table = SqlBulkCopyHelper.ListToTable(dataList, "BulkTest");
             var tableTwo = SqlBulkCopyHelper.ListToTable(dataListTwo, "BulkTestTwo");
 
-            var tableUpdate = SqlCoreHelper.ExecuteDataSetText("select top 5000 Id,FieldD from BulkTest order by FieldU asc", null).Tables[0];
-            var tableTwoUpdate = SqlCoreHelper.ExecuteDataSetText("select top 5000 Id,FieldD from BulkTestTwo order by FieldU asc", null).Tables[0];
+            var tableUpdate = SqlCoreHelper.ExecuteDataSetText("select top 500000 Id,FieldD from BulkTest order by FieldU asc", null).Tables[0];
+            var tableTwoUpdate = SqlCoreHelper.ExecuteDataSetText("select top 500000 Id,FieldD from BulkTestTwo order by FieldU asc", null).Tables[0];
             foreach (DataRow item in tableUpdate.Rows)
             {
                 item["FieldD"] = "5555";
@@ -83,6 +83,13 @@ namespace MSTest
             sw.Stop();
             string bb = sw.Elapsed.TotalSeconds.ToString();
             Console.WriteLine(bb);
+        }
+        [TestMethod]
+        public void ListExpect()
+        {
+            var oldList = new List<string>() { "aaaa", "aaaa", "bbbb", "cccc", "dddd" };
+            var newList = new List<string>() { "bbbb", "cccc" };
+            var list = oldList.Except(newList);
         }
     }
 }
