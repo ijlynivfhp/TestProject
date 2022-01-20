@@ -83,6 +83,10 @@ namespace MSTest
             #region test1
 
             #endregion
+
+            #region test2
+
+            #endregion
         }
     }
 }
