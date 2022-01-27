@@ -274,7 +274,7 @@ namespace MSTest
         /// <param name="modelList"></param>
         /// <param name="tableName"></param>
         /// <returns></returns>
-        public static DataTable ListToTable<TModel>(List<TModel> modelList, string tableName = default, List<string> tableFields = default)
+        public static DataTable ListToTable<TModel>(List<TModel> modelList, string tableName = "", List<string> tableFields = default)
         {
             Type modelType = typeof(TModel);
             if (string.IsNullOrEmpty(tableName))
