@@ -42,7 +42,7 @@ namespace MSTest
             {
                 conn.Open();
                 var tran = conn.BeginTransaction();//开启事务
-                var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 600 };
+                var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = 6000000 };
 
                 try
                 {
