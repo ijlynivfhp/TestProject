@@ -81,5 +81,18 @@ namespace MSTest
             string bb = sw.Elapsed.TotalSeconds.ToString();
             Console.WriteLine(bb);
         }
+        [TestMethod]
+        public void Test()
+        {
+            var str = 0 + null;
+            var str1 = "" + null;
+            var dataList = CommonHelper.GetTestListDto(10);
+            var table = SqlBulkCopyHelper.ListToTable(dataList, "BulkTest");
+            var bb = new { Id = Guid.Empty, FieldB = string.Empty, FieldU = default(DateTime?), FieldV = default(decimal?), FieldX = default(int) };
+            var dd = table.ToAnonymousList(bb);
+            var test = new object().GetType();
+            var test1 = new System.Dynamic.ExpandoObject().GetType();
+            var test2 = bb.GetType();
+        }
     }
 }
