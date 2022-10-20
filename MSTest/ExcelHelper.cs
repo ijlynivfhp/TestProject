@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System;
+using Castle.DynamicProxy;
 
 namespace MSTest
 {
@@ -15,7 +16,13 @@ namespace MSTest
         [TestMethod]
         public void ExcelTest()
         {
-            CommonExcel.MiniExcelExport();
+            ProxyGenerator proxyGenerator = new ProxyGenerator();
+            object[] args = { "Hello World" };
+            SomeInterface proxyClass = (SomeInterface)proxyGenerator.CreateClassProxy(typeof(ImpClass),args, new SomeInterceptor());
+            proxyClass.DoSome();
+            proxyClass.DoSomeA();
+
+            //CommonExcel.MiniExcelExport();
         }
 
         [TestMethod]
