@@ -14,13 +14,25 @@ namespace MSTest
     public class ExcelHelper
     {
         [TestMethod]
+
         public void ExcelTest()
         {
-            ProxyGenerator proxyGenerator = new ProxyGenerator();
-            object[] args = { "Hello World" };
-            SomeInterface proxyClass = (SomeInterface)proxyGenerator.CreateClassProxy(typeof(ImpClass),args, new SomeInterceptor());
-            proxyClass.DoSome();
-            proxyClass.DoSomeA();
+            //Castle.net
+            //ProxyGenerator proxyGenerator = new ProxyGenerator();
+            //object[] args = { "Hello World" };
+            //SomeInterface proxyClass = (SomeInterface)proxyGenerator.CreateClassProxy(typeof(ImpClass),args, new SomeInterceptor());
+            //proxyClass.DoSome();
+            //proxyClass.DoSomeA();
+
+            //System.Reflection.DispatchProxy
+            //var sampleProxy = (targetInterface)SampleProxy.Create<targetInterface, SampleProxy>();
+            //sampleProxy.Write("here is invoke by proxy");
+            //sampleProxy.WriteTwo("here is invoke by proxy");
+
+            //KingAOP
+            //SimonDemo simon = new SimonDemo();这个不行，必须dynamic
+            //dynamic simon = new SimonDemo();
+            //simon.Operate();
 
             //CommonExcel.MiniExcelExport();
         }
