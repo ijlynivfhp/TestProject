@@ -31,16 +31,22 @@ namespace MSTest
             //sw.Stop();
             //string bb = sw.Elapsed.TotalSeconds.ToString();
             //Console.WriteLine(bb);
-            var tee = new { PwId = 0, ProId = Guid.Empty };
-            var tt = SqlHelper.GetAnonymousList(tee.GetType(), "select top 100 * from Labor_ProjectWorker");
 
-            //var aa = SqlHelper.GetList<typeof(tee)>("select top 100 * from Labor_ProjectWorker");
+            //var aa = SqlHelper.GetField<int>("select PwId from Labor_ProjectWorker");
+            //var aaa = SqlHelper.GetField<int>("select count(1) from Labor_ProjectWorker");
+            //var aaaa = SqlHelper.GetField<Guid>("select ProId from Labor_ProjectWorker");
+            //var bb = SqlHelper.Get<dynamic>("select top 100 * from Labor_ProjectWorker");
+            //var bbb = SqlHelper.Get<TestDto>("select top 100 * from Labor_ProjectWorker");
+            //var bbbb = SqlHelper.Get<dynamic>("select top 100 PwId from Labor_ProjectWorker");
+            //var cc = SqlHelper.GetList<dynamic>("select top 100 * from Labor_ProjectWorker");
+            //var ccc = SqlHelper.GetList<TestDto>("select top 100 * from Labor_ProjectWorker");
 
-            var aa11 = SqlHelper.GetList<dynamic>("select top 100 * from Labor_ProjectWorker");
+            //var anonymous = new { PwId = 0, ProId = Guid.Empty };
+            //var dd = SqlHelper.GetAnonymousList(anonymous.GetType(), "select top 100 * from Labor_ProjectWorker");
 
-            var aa22 = SqlHelper.GetList<object>("select top 100 * from Labor_ProjectWorker");
-
-            var bb = SqlHelper.Get<dynamic>("select top 100 * from Labor_ProjectWorker");
+            //var ee = SqlHelper.GetPager<dynamic>("Labor_ProjectWorker", "ProId,PwId,WorkerName", "AddTime desc", 10, 1, default, out int totalCount);
+            //var eee = SqlHelper.GetPager<TestDto>("Labor_ProjectWorker", "ProId,PwId,WorkerName", "AddTime desc", 10, 1, default, out int totalCount1);
+            //var eeee = SqlHelper.GetAnonymousPager(anonymous.GetType(), "Labor_ProjectWorker", "ProId,PwId,WorkerName", "AddTime desc", 10, 1, default, out int totalCount2);
 
         }
         [TestMethod]

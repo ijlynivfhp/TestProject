@@ -15,6 +15,7 @@ using System.Dynamic;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.Collections;
 using System.IO.Pipes;
+using System.Drawing;
 
 namespace CommonLibrary
 {
@@ -172,6 +173,97 @@ namespace CommonLibrary
         }
 
         /// <summary>
+        /// 获取分页数据（单表分页）
+        /// </summary>
+        /// <param name="tableName">表名</param>
+        /// <param name="columns">要取的列名（逗号分开）</param>
+        /// <param name="order">排序</param>
+        /// <param name="pageSize">每页大小</param>
+        /// <param name="pageIndex">当前页</param>
+        /// <param name="where">查询条件</param>
+        /// <param name="totalCount">总记录数</param>
+        public static List<T> GetPager<T>(string tableName, string columns, string order, int pageSize, int pageIndex, string where, out int totalCount)
+        {
+            //实例化一个List<>泛型集合  
+            var dataList = new List<T>();
+
+            SqlParameter[] paras = {
+                                       new SqlParameter("@tablename",SqlDbType.VarChar,100),
+                                       new SqlParameter("@columns",SqlDbType.VarChar,1000),
+                                       new SqlParameter("@order",SqlDbType.VarChar,100),
+                                       new SqlParameter("@pageSize",SqlDbType.Int),
+                                       new SqlParameter("@pageIndex",SqlDbType.Int),
+                                       new SqlParameter("@where",SqlDbType.VarChar,2000),
+                                       new SqlParameter("@totalCount",SqlDbType.Int)
+                                   };
+            paras[0].Value = tableName;
+            paras[1].Value = columns;
+            paras[2].Value = order;
+            paras[3].Value = pageSize;
+            paras[4].Value = pageIndex;
+            paras[5].Value = where;
+            paras[6].Direction = ParameterDirection.Output;   //输出参数
+
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                connection.Open();//打开数据库链接
+
+                var command = new SqlCommand("sp_Pager", connection);//创建sqlCommand对象
+                command.CommandType = CommandType.StoredProcedure;//声明以存储过程的方式执行。
+                command.Parameters.AddRange(paras);//将cmd中的参数和将要执行的存储过程中的参数相对应
+                var reader = command.ExecuteReader(CommandBehavior.CloseConnection);//指明了CommandReader然后调用CommandBehavior.CloseConnetion方法来关闭链接
+
+                var type = typeof(T);
+                var typeName = type.Name;
+
+                while (reader.Read())
+                {
+                    //动态对象 dynamic,object
+                    if (type == typeof(object))
+                    {
+                        var RowInstance = (IDictionary<string, object>)new ExpandoObject();
+                        for (int i = 0; i < reader.FieldCount; i++)
+                        {
+                            string fieldName = reader.GetName(i);
+                            var value = reader[fieldName];
+                            RowInstance.Add(fieldName, value == DBNull.Value ? null : value);
+                        }
+                        dataList.Add((T)RowInstance);
+                    }
+                    //匿名类 anonymous
+                    else if (typeName.Contains("<>") && typeName.Contains("__") && typeName.Contains("AnonymousType")) { }
+                    //普通类 class
+                    else
+                    {
+                        T RowInstance = Activator.CreateInstance<T>();//动态创建数据实体对象  
+                                                                      //通过反射取得对象所有的Property  
+                        foreach (PropertyInfo Property in typeof(T).GetProperties())
+                        {
+                            try
+                            {
+                                //取得当前数据库字段的顺序  
+                                int Ordinal = reader.GetOrdinal(Property.Name);
+                                if (reader.GetValue(Ordinal) != DBNull.Value)
+                                {
+                                    //将DataReader读取出来的数据填充到对象实体的属性里  
+                                    Property.SetValue(RowInstance, Convert.ChangeType(reader.GetValue(Ordinal), Property.PropertyType), null);
+                                }
+                            }
+                            catch
+                            {
+                                break;
+                            }
+                        }
+                        dataList.Add(RowInstance);
+                    }
+                }
+
+                totalCount = Convert.ToInt32(paras[6].Value);//获取存储过程输出参数的值 即当前记录总数
+            }
+            return dataList;
+        }
+
+        /// <summary>
         /// 查询匿名对象集合
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -225,6 +317,87 @@ namespace CommonLibrary
                 {
                     reader.Close();
                 }
+            }
+
+            return list;
+        }
+
+        /// <summary>
+        /// 获取分页数据（单表分页）
+        /// </summary>
+        /// <param name="tableName">表名</param>
+        /// <param name="columns">要取的列名（逗号分开）</param>
+        /// <param name="order">排序</param>
+        /// <param name="pageSize">每页大小</param>
+        /// <param name="pageIndex">当前页</param>
+        /// <param name="where">查询条件</param>
+        /// <param name="totalCount">总记录数</param>
+        public static IList GetAnonymousPager(Type anonymousType, string tableName, string columns, string order, int pageSize, int pageIndex, string where, out int totalCount)
+        {
+            Type typeMaster = typeof(List<>);
+            Type listType = typeMaster.MakeGenericType(anonymousType);
+            var list = Activator.CreateInstance(listType) as IList;
+
+            var constructor = anonymousType.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                           .OrderBy(c => c.GetParameters().Length).First();
+            var parameters = constructor.GetParameters();
+            var values = new object[parameters.Length];
+
+            SqlParameter[] paras = {
+                                       new SqlParameter("@tablename",SqlDbType.VarChar,100),
+                                       new SqlParameter("@columns",SqlDbType.VarChar,1000),
+                                       new SqlParameter("@order",SqlDbType.VarChar,100),
+                                       new SqlParameter("@pageSize",SqlDbType.Int),
+                                       new SqlParameter("@pageIndex",SqlDbType.Int),
+                                       new SqlParameter("@where",SqlDbType.VarChar,2000),
+                                       new SqlParameter("@totalCount",SqlDbType.Int)
+                                   };
+            paras[0].Value = tableName;
+            paras[1].Value = columns;
+            paras[2].Value = order;
+            paras[3].Value = pageSize;
+            paras[4].Value = pageIndex;
+            paras[5].Value = where;
+            paras[6].Direction = ParameterDirection.Output;   //输出参数
+
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                connection.Open();//打开数据库链接
+
+                var command = new SqlCommand("sp_Pager", connection);//创建sqlCommand对象
+                command.CommandType = CommandType.StoredProcedure;//声明以存储过程的方式执行。
+                command.Parameters.AddRange(paras);//将cmd中的参数和将要执行的存储过程中的参数相对应
+                var reader = command.ExecuteReader(CommandBehavior.CloseConnection);//指明了CommandReader然后调用CommandBehavior.CloseConnetion方法来关闭链接
+
+                while (reader.Read())
+                {
+                    for (int i = 0; i < parameters.Length; i++)
+                    {
+                        var parameter = parameters[i];
+                        object itemValue = default;
+                        int Ordinal = reader.GetOrdinal(parameter.Name);
+                        var fieldValue = reader.GetValue(Ordinal);
+                        if (fieldValue != DBNull.Value)
+                        {
+                            if (!parameter.ParameterType.IsGenericType)
+                            {
+                                itemValue = Convert.ChangeType(fieldValue, parameter.ParameterType);
+                            }
+                            else
+                            {
+                                Type genericTypeDefinition = parameter.ParameterType.GetGenericTypeDefinition();
+                                if (genericTypeDefinition == typeof(Nullable<>))
+                                {
+                                    itemValue = Convert.ChangeType(fieldValue, Nullable.GetUnderlyingType(parameter.ParameterType));
+                                }
+                            }
+                        }
+                        values[i] = itemValue;
+                    }
+                    list.Add(constructor.Invoke(values));
+                }
+
+                totalCount = Convert.ToInt32(paras[6].Value);//获取存储过程输出参数的值 即当前记录总数
             }
 
             return list;
@@ -1116,5 +1289,35 @@ namespace CommonLibrary
         }
 
         #endregion 批量操作
+
+        #region 分页存储过程
+        private static string sp_Pager = $@"CREATE proc [dbo].[sp_Pager]
+            @tableName varchar(64),  --分页表名
+            @columns varchar(1000),  --查询的字段
+            @order varchar(256),    --排序方式
+            @pageSize int,  --每页大小
+            @pageIndex int,  --当前页
+            @where varchar(2000) = '1=1',  --查询条件
+            @totalCount int output  --总记录数
+            as
+            declare @beginIndex int,@endIndex int,@sqlResult nvarchar(2000),@sqlGetCount nvarchar(2000)
+            set @beginIndex = (@pageIndex - 1) * @pageSize + 1  --开始
+            set @endIndex = (@pageIndex) * @pageSize  --结束
+            set @sqlresult = 'select '+@columns+' from (
+            select row_number() over(order by '+ @order +')
+            as Rownum,'+@columns+'
+            from '+@tableName+' where '+ @where +') as T
+            where T.Rownum between ' + CONVERT(varchar(max),@beginIndex) + ' and ' + CONVERT(varchar(max),@endIndex)
+            set @sqlGetCount = 'select @totalCount = count(*) from '+@tablename+' where ' + @where  --总数
+            --print @sqlresult
+            exec(@sqlresult)
+            exec sp_executesql @sqlGetCount,N'@totalCount int output',@totalCount output
+            --测试调用：
+            --declare @total int
+            --exec sp_Pager 'tbLoginInfo','Id,UserName,Success','LoginDate desc',4,2,'1=1',@total output
+            --print @total
+ 
+            GO";
+        #endregion
     }
 }
