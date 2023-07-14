@@ -62,6 +62,13 @@ namespace DTO
         public int FieldX { get; set; }
     }
 
+    public class TestDto
+    {
+        public int PwId { get; set; }
+        public Guid ProId { get; set; }
+        public string WorkerName { get; set; }
+        public string PaperSigned { get; set; }
+    }
     /// <summary>
     /// 备用扩展列数
     /// </summary>

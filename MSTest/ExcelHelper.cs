@@ -21,16 +21,27 @@ namespace MSTest
         [TestMethod]
         public void DataInsert()
         {
-            var dataList = CommonHelper.GetTestListDto(5000);
-            var dataListTwo = CommonHelper.GetTestListDtoTwo(5000);
-            var table = SqlBulkCopyHelper.ListToTable(dataList, "BulkTest");
-            var tableTwo = SqlBulkCopyHelper.ListToTable(dataListTwo, "BulkTestTwo");
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
-            SqlBulkCopyHelper.BulkInsertTables(new List<DataTable>() { table, tableTwo }).Wait();
-            sw.Stop();
-            string bb = sw.Elapsed.TotalSeconds.ToString();
-            Console.WriteLine(bb);
+            //var dataList = CommonHelper.GetTestListDto(5000);
+            //var dataListTwo = CommonHelper.GetTestListDtoTwo(5000);
+            //var table = SqlBulkCopyHelper.ListToTable(dataList, "BulkTest");
+            //var tableTwo = SqlBulkCopyHelper.ListToTable(dataListTwo, "BulkTestTwo");
+            //Stopwatch sw = new Stopwatch();
+            //sw.Start();
+            //SqlBulkCopyHelper.BulkInsertTables(new List<DataTable>() { table, tableTwo }).Wait();
+            //sw.Stop();
+            //string bb = sw.Elapsed.TotalSeconds.ToString();
+            //Console.WriteLine(bb);
+            var tee = new { PwId = 0, ProId = Guid.Empty };
+            var tt = SqlHelper.GetAnonymousList(tee.GetType(), "select top 100 * from Labor_ProjectWorker");
+
+            //var aa = SqlHelper.GetList<typeof(tee)>("select top 100 * from Labor_ProjectWorker");
+
+            var aa11 = SqlHelper.GetList<dynamic>("select top 100 * from Labor_ProjectWorker");
+
+            var aa22 = SqlHelper.GetList<object>("select top 100 * from Labor_ProjectWorker");
+
+            var bb = SqlHelper.Get<dynamic>("select top 100 * from Labor_ProjectWorker");
+
         }
         [TestMethod]
         public void DataUpdate()
