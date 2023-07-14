@@ -103,7 +103,7 @@ namespace CommonLibrary
         }
 
         /// <summary>
-        /// 查询动态类型集合
+        /// 查询泛型类型集合
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="sql"></param>
@@ -172,7 +172,7 @@ namespace CommonLibrary
         }
 
         /// <summary>
-        /// 查询动态类型集合
+        /// 查询匿名对象集合
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="sql"></param>
