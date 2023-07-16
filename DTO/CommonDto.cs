@@ -64,6 +64,7 @@ namespace DTO
 
     public class TestDto
     {
+        public int Id { get; set; }
         public int PwId { get; set; }
         public Guid ProId { get; set; }
         public string WorkerName { get; set; }

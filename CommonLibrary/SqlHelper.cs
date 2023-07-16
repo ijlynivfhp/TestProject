@@ -16,6 +16,10 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.Collections;
 using System.IO.Pipes;
 using System.Drawing;
+using Microsoft.EntityFrameworkCore.Metadata;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
+using Newtonsoft.Json.Linq;
+using System.ComponentModel;
 
 namespace CommonLibrary
 {
@@ -43,6 +47,206 @@ namespace CommonLibrary
         /// 数据库连接字符串
         /// </summary>
         public static string connectionString = configuration["DBSetting:ConnectString"];
+
+        /// <summary>
+        /// 插入对象
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="model"></param>
+        /// <param name="tableName"></param>
+        /// <param name="idName"></param>
+        /// <returns></returns>
+        public static int Add<T>(object model, string tableName = default, string idName = default)
+        {
+            Type addType = typeof(T);
+            var addProperties = addType.GetProperties();
+
+            idName = string.IsNullOrEmpty(idName) ? addProperties.FirstOrDefault(o => o.Name.ToLower().Contains("id"))?.Name ?? "Id" : idName;
+
+            var dic = ObjToDic(model);
+            dic.Remove(idName);
+
+            if (string.IsNullOrEmpty(tableName))
+                tableName = addType.Name;
+            string columnString = string.Join(",", dic.Select(p => string.Format("{0}", p.Key)));
+            string valueString = string.Join(",", dic.Select(p => string.Format("@{0}", p.Key)));
+            string sqlStr = $@"insert {tableName} ({columnString}) values ({valueString})
+                Select @@IDENTITY AS '{idName}'";
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                var command = new SqlCommand(sqlStr, conn);
+                SqlParameter[] sqlParameter = dic.Select(p => new SqlParameter(string.Format("@{0}", p.Key), p.Value ?? DBNull.Value)).ToArray();
+                command.Parameters.AddRange(sqlParameter);
+                var idValue = Convert.ToInt32(command.ExecuteScalar());
+                if (addType == model.GetType())
+                    addType.GetProperty(idName).SetValue(model, idValue);
+                return idValue;
+            }
+        }
+
+        /// <summary>
+        /// 插入对象
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="model"></param>
+        /// <param name="tableName"></param>
+        /// <param name="idName"></param>
+        /// <returns></returns>
+        public static int Set<T>(object model, object where = default, string tableName = default, string idName = default)
+        {
+            Type addType = typeof(T);
+            var addProperties = addType.GetProperties();
+
+            idName = string.IsNullOrEmpty(idName) ? addProperties.FirstOrDefault(o => o.Name.ToLower().Contains("id"))?.Name ?? "Id" : idName;
+
+            var dic = ObjToDic(model);
+            var whereDic = ObjToDic(where);
+
+            if (string.IsNullOrEmpty(tableName))
+                tableName = addType.Name;
+            var sqlStr = string.Empty;
+            if (dic.ContainsKey(idName))
+            {
+                var idValue = dic[idName] ?? string.Empty;
+                dic.Remove(idName);
+                string setStr = string.Join(",", dic.Select(p => string.Format("{0}=@{0}", p.Key)));
+                sqlStr = $@"update {tableName} set {setStr} where {idName}={idValue}";
+            }
+            else
+            {
+                var whereSql = string.Empty;
+                if (whereDic.ContainsKey("WhereSql"))
+                {
+                    whereSql = whereDic.FirstOrDefault(o => o.Key == "WhereSql").Value.ToString() ?? string.Empty;
+                    whereSql = whereSql.TrimStart().ToLower().StartsWith("and") ? whereSql : $"AND {whereSql}";
+                    whereDic.Remove("WhereSql");
+                }
+                string setStr = string.Join(",", dic.Select(p => string.Format("{0}=@{0}", p.Key)));
+                sqlStr = $@"update {tableName} set {setStr} where 1=1 {string.Join("", whereDic.Select(o => $" AND {o.Key}={(o.Value.GetType() == typeof(int) || o.Value.GetType() == typeof(long) ? o.Value : $"'{o.Value}'")} "))} {whereSql}";
+            }
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                var command = new SqlCommand(sqlStr, conn);
+                SqlParameter[] sqlParameter = dic.Select(p => new SqlParameter(string.Format("@{0}", p.Key), p.Value ?? DBNull.Value)).ToArray();
+                command.Parameters.AddRange(sqlParameter);
+                return command.ExecuteNonQuery();
+            }
+        }
+
+        /// <summary>
+        /// 批量新增
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="objList"></param>
+        /// <param name="tableName"></param>
+        /// <param name="idName"></param>
+        /// <returns></returns>
+        public static List<int> AddList<T>(List<object> objList, string tableName = default, string idName = default)
+        {
+            var list = new List<int>();
+            try
+            {
+                foreach (object obj in objList)
+                {
+                    list.Add(Add<T>(obj, tableName, idName));
+                }
+            }
+            catch { }
+            return list;
+        }
+
+        /// <summary>
+        /// 批量更新
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="objList"></param>
+        /// <param name="where"></param>
+        /// <param name="tableName"></param>
+        /// <param name="idName"></param>
+        /// <returns></returns>
+        public static int SetList<T>(List<Model> objList, object where = default, string tableName = default, string idName = default)
+        {
+            try
+            {
+                foreach (object obj in objList) Set<T>(obj, where, tableName, idName);
+                return objList.Count;
+            }
+            catch { }
+            return default;
+        }
+
+        /// <summary>
+        /// 根据主键，或唯一键（默认取类第一个字段）查询数据
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="I"></typeparam>
+        /// <param name="id"></param>
+        /// <param name="tableName"></param>
+        /// <param name="fields"></param>
+        /// <returns></returns>
+        public static T GetById<T>(object id, string tableName = default, string fields = "*", string idName = default)
+        {
+            Type type = typeof(T); var typeName = type.Name;
+            var properties = type.GetProperties();
+
+            if (string.IsNullOrEmpty(tableName))
+                tableName = type.Name;
+
+            idName = string.IsNullOrEmpty(idName) ? properties.FirstOrDefault(o => o.Name.ToLower().Contains("id"))?.Name ?? "Id" : idName;
+
+            var idType = id.GetType();
+
+            string sqlStr = string.Format("select {0} from {1} where {2}={3}", fields, tableName, idName, (idType == typeof(int) || idType == typeof(long) ? id : $"'{id}'"));
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                SqlCommand command = new SqlCommand(sqlStr, conn);
+                var reader = command.ExecuteReader(CommandBehavior.CloseConnection);//指明了CommandReader然后调用CommandBehavior.CloseConnetion方法来关闭链接
+                reader.Read();
+                try
+                {
+                    //动态对象 dynamic,object
+                    if (type == typeof(object))
+                    {
+                        var RowInstance = (IDictionary<string, object>)new ExpandoObject();
+                        for (int i = 0; i < reader.FieldCount; i++)
+                        {
+                            string fieldName = reader.GetName(i);
+                            var value = reader[fieldName];
+                            RowInstance.Add(fieldName, value == DBNull.Value ? null : value);
+                        }
+
+                        return (T)RowInstance;
+                    }
+                    //匿名类 anonymous
+                    else if (typeName.Contains("<>") && typeName.Contains("__") && typeName.Contains("AnonymousType")) { }
+                    //普通类 class
+                    else
+                    {
+                        T RowInstance = Activator.CreateInstance<T>();//动态创建数据实体对象  
+                                                                      //通过反射取得对象所有的Property  
+                        foreach (PropertyInfo Property in typeof(T).GetProperties())
+                        {
+                            //取得当前数据库字段的顺序  
+                            int Ordinal = reader.GetOrdinal(Property.Name);
+                            if (reader.GetValue(Ordinal) != DBNull.Value)
+                            {
+                                //将DataReader读取出来的数据填充到对象实体的属性里  
+                                Property.SetValue(RowInstance, Convert.ChangeType(reader.GetValue(Ordinal), Property.PropertyType), null);
+                            }
+                        }
+                        return RowInstance;
+                    }
+                }
+                catch { }
+            }
+            return default;
+        }
 
         /// <summary>
         /// 查询泛型实体
@@ -216,47 +420,51 @@ namespace CommonLibrary
                 var type = typeof(T);
                 var typeName = type.Name;
 
-                while (reader.Read())
+                try
                 {
-                    //动态对象 dynamic,object
-                    if (type == typeof(object))
+                    while (reader.Read())
                     {
-                        var RowInstance = (IDictionary<string, object>)new ExpandoObject();
-                        for (int i = 0; i < reader.FieldCount; i++)
+                        //动态对象 dynamic,object
+                        if (type == typeof(object))
                         {
-                            string fieldName = reader.GetName(i);
-                            var value = reader[fieldName];
-                            RowInstance.Add(fieldName, value == DBNull.Value ? null : value);
-                        }
-                        dataList.Add((T)RowInstance);
-                    }
-                    //匿名类 anonymous
-                    else if (typeName.Contains("<>") && typeName.Contains("__") && typeName.Contains("AnonymousType")) { }
-                    //普通类 class
-                    else
-                    {
-                        T RowInstance = Activator.CreateInstance<T>();//动态创建数据实体对象  
-                                                                      //通过反射取得对象所有的Property  
-                        foreach (PropertyInfo Property in typeof(T).GetProperties())
-                        {
-                            try
+                            var RowInstance = (IDictionary<string, object>)new ExpandoObject();
+                            for (int i = 0; i < reader.FieldCount; i++)
                             {
-                                //取得当前数据库字段的顺序  
-                                int Ordinal = reader.GetOrdinal(Property.Name);
-                                if (reader.GetValue(Ordinal) != DBNull.Value)
+                                string fieldName = reader.GetName(i);
+                                var value = reader[fieldName];
+                                RowInstance.Add(fieldName, value == DBNull.Value ? null : value);
+                            }
+                            dataList.Add((T)RowInstance);
+                        }
+                        //匿名类 anonymous
+                        else if (typeName.Contains("<>") && typeName.Contains("__") && typeName.Contains("AnonymousType")) { }
+                        //普通类 class
+                        else
+                        {
+                            T RowInstance = Activator.CreateInstance<T>();//动态创建数据实体对象  
+                                                                          //通过反射取得对象所有的Property  
+                            foreach (PropertyInfo Property in typeof(T).GetProperties())
+                            {
+                                try
                                 {
-                                    //将DataReader读取出来的数据填充到对象实体的属性里  
-                                    Property.SetValue(RowInstance, Convert.ChangeType(reader.GetValue(Ordinal), Property.PropertyType), null);
+                                    //取得当前数据库字段的顺序  
+                                    int Ordinal = reader.GetOrdinal(Property.Name);
+                                    if (reader.GetValue(Ordinal) != DBNull.Value)
+                                    {
+                                        //将DataReader读取出来的数据填充到对象实体的属性里  
+                                        Property.SetValue(RowInstance, Convert.ChangeType(reader.GetValue(Ordinal), Property.PropertyType), null);
+                                    }
+                                }
+                                catch
+                                {
+                                    break;
                                 }
                             }
-                            catch
-                            {
-                                break;
-                            }
+                            dataList.Add(RowInstance);
                         }
-                        dataList.Add(RowInstance);
                     }
                 }
+                catch { }
 
                 totalCount = Convert.ToInt32(paras[6].Value);//获取存储过程输出参数的值 即当前记录总数
             }
@@ -369,33 +577,37 @@ namespace CommonLibrary
                 command.Parameters.AddRange(paras);//将cmd中的参数和将要执行的存储过程中的参数相对应
                 var reader = command.ExecuteReader(CommandBehavior.CloseConnection);//指明了CommandReader然后调用CommandBehavior.CloseConnetion方法来关闭链接
 
-                while (reader.Read())
+                try
                 {
-                    for (int i = 0; i < parameters.Length; i++)
+                    while (reader.Read())
                     {
-                        var parameter = parameters[i];
-                        object itemValue = default;
-                        int Ordinal = reader.GetOrdinal(parameter.Name);
-                        var fieldValue = reader.GetValue(Ordinal);
-                        if (fieldValue != DBNull.Value)
+                        for (int i = 0; i < parameters.Length; i++)
                         {
-                            if (!parameter.ParameterType.IsGenericType)
+                            var parameter = parameters[i];
+                            object itemValue = default;
+                            int Ordinal = reader.GetOrdinal(parameter.Name);
+                            var fieldValue = reader.GetValue(Ordinal);
+                            if (fieldValue != DBNull.Value)
                             {
-                                itemValue = Convert.ChangeType(fieldValue, parameter.ParameterType);
-                            }
-                            else
-                            {
-                                Type genericTypeDefinition = parameter.ParameterType.GetGenericTypeDefinition();
-                                if (genericTypeDefinition == typeof(Nullable<>))
+                                if (!parameter.ParameterType.IsGenericType)
                                 {
-                                    itemValue = Convert.ChangeType(fieldValue, Nullable.GetUnderlyingType(parameter.ParameterType));
+                                    itemValue = Convert.ChangeType(fieldValue, parameter.ParameterType);
+                                }
+                                else
+                                {
+                                    Type genericTypeDefinition = parameter.ParameterType.GetGenericTypeDefinition();
+                                    if (genericTypeDefinition == typeof(Nullable<>))
+                                    {
+                                        itemValue = Convert.ChangeType(fieldValue, Nullable.GetUnderlyingType(parameter.ParameterType));
+                                    }
                                 }
                             }
+                            values[i] = itemValue;
                         }
-                        values[i] = itemValue;
+                        list.Add(constructor.Invoke(values));
                     }
-                    list.Add(constructor.Invoke(values));
                 }
+                catch { }
 
                 totalCount = Convert.ToInt32(paras[6].Value);//获取存储过程输出参数的值 即当前记录总数
             }
@@ -1318,6 +1530,35 @@ namespace CommonLibrary
             --print @total
  
             GO";
+        #endregion
+
+        #region 私有方法
+        private static Dictionary<string, object> ObjToDic(object model)
+        {
+            var dic = new Dictionary<string, object>();
+            if (model is null) return dic;
+
+            var type = model.GetType();
+            var typeName = type.Name;
+            if (typeName == "ExpandoObject")
+                dic = ((IEnumerable<KeyValuePair<string, object>>)model).ToDictionary(o => o.Key, o => o.Value);
+            else if (typeName.Contains("<>") && typeName.Contains("__") && typeName.Contains("AnonymousType"))
+            {
+                var constructor = type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                           .OrderBy(c => c.GetParameters().Length).First();
+                var fields = constructor.GetParameters().Select(o => o.Name).ToList();
+                foreach (var item in fields) dic.Add(item, type.GetProperty(item).GetValue(model));
+            }
+            else
+            {
+                var fields = type.GetProperties().Select(o => o.Name).ToList();
+                foreach (var item in fields)
+                {
+                    dic.Add(item, type.GetProperty(item).GetValue(model));
+                }
+            }
+            return dic;
+        }
         #endregion
     }
 }

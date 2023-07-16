@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System;
+using Newtonsoft.Json;
 
 namespace MSTest
 {
@@ -47,6 +48,28 @@ namespace MSTest
             //var ee = SqlHelper.GetPager<dynamic>("Labor_ProjectWorker", "ProId,PwId,WorkerName", "AddTime desc", 10, 1, default, out int totalCount);
             //var eee = SqlHelper.GetPager<TestDto>("Labor_ProjectWorker", "ProId,PwId,WorkerName", "AddTime desc", 10, 1, default, out int totalCount1);
             //var eeee = SqlHelper.GetAnonymousPager(anonymous.GetType(), "Labor_ProjectWorker", "ProId,PwId,WorkerName", "AddTime desc", 10, 1, default, out int totalCount2);
+            //var ff = SqlHelper.GetById<dynamic>(35, "[Labor_SyncBlackList]","Id");
+
+
+            //var aa = new { PwId = 1, WorkerName = "test" };
+            //var aaa = JsonConvert.DeserializeObject<object>(JsonConvert.SerializeObject(aa));
+            //dynamic aaaa = new System.Dynamic.ExpandoObject();
+            //aaaa.PwId = 123; aaaa.WorkerName = "test";
+            //var bbbb = new TestDto(); bbbb.PwId = 10; bbbb.WorkerName = "test";
+
+            //var tt = SqlHelper.Add<TestDto>(aaaa);
+
+            //aaaa.PwId = 888;
+            //var ttt = SqlHelper.Set<TestDto>(aaaa, new { Id = 18 });
+            dynamic aaaa = new System.Dynamic.ExpandoObject();
+            aaaa.PwId = 123; aaaa.WorkerName = "test";
+            var tt =new List<object>();
+            for (int i = 0; i < 10; i++)
+            {
+                aaaa.PwId += 1;
+                tt.Add(aaaa);
+            }
+            var ttt = SqlHelper.AddList<TestDto>(tt);
 
         }
         [TestMethod]
