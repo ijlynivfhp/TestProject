@@ -540,7 +540,7 @@ namespace MSTest
                        A.colorder,
                        C.DATA_TYPE,
                        A.isnullable,
-                       IIF(E.COLUMN_NAME IS NULL, 0, 1) IsIdentity,
+                       COLUMNPROPERTY(OBJECT_ID('{tableName}'), A.name, 'IsIdentity') IsIdentity,
                        SUBSTRING(D.text, 3, LEN(D.text) - 4) DefaultValue
                 FROM syscolumns A
                     INNER JOIN sysobjects B
