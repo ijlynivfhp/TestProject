@@ -536,13 +536,28 @@ namespace MSTest
         /// <returns></returns>
         public static List<SysColumn> GetTableColumns(string tableName)
         {
-            string sql = string.Format(@"select a.name,a.colorder,c.DATA_TYPE,a.isnullable,SUBSTRING(d.text,3,1) defaultValue from 
-                syscolumns a inner join sysobjects b on a.id=b.id 
-                LEFT JOIN dbo.syscomments d ON a.cdefault  = d.id
-                inner join information_schema.columns c  on b.name=c.TABLE_NAME and c.COLUMN_NAME=a.name 
-                where b.xtype='U' and b.name='{0}' order by a.colid asc", tableName);
+            string sql = string.Format($@"SELECT A.name,
+                       A.colorder,
+                       C.DATA_TYPE,
+                       A.isnullable,
+                       IIF(E.COLUMN_NAME IS NULL, 0, 1) IsIdentity,
+                       SUBSTRING(D.text, 3, LEN(D.text) - 4) DefaultValue
+                FROM syscolumns A
+                    INNER JOIN sysobjects B
+                        ON A.id = B.id
+                    LEFT JOIN dbo.syscomments D
+                        ON A.cdefault = D.id
+                    INNER JOIN INFORMATION_SCHEMA.COLUMNS C
+                        ON B.name = C.TABLE_NAME
+                           AND C.COLUMN_NAME = A.name
+                    LEFT JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE E
+                        ON E.TABLE_NAME = C.TABLE_NAME
+                           AND E.COLUMN_NAME = A.name
+                WHERE B.xtype = 'U'
+                      AND B.name = '{tableName}'
+                ORDER BY A.colid ASC");
 
-            List<SysColumn> columns = new List<SysColumn>();
+            var columns = new List<SysColumn>();
             DataTable dt = SqlCoreHelper.ExecuteDataSetText(sql, null).Tables[0];
             foreach (DataRow reader in dt.Rows)
             {
@@ -550,8 +565,9 @@ namespace MSTest
                 column.Name = reader[0].ToString();
                 column.ColOrder = Convert.ToInt16(reader[1]);
                 column.Type = reader[2].ToString();
-                column.IsNull = Convert.ToInt32(reader[3]);
-                column.Default = reader[4].ToString();
+                column.IsNull = Convert.ToInt16(reader[3]);
+                column.Default = reader[5].ToString();
+                column.Identity= Convert.ToInt16(reader[4]);
                 columns.Add(column);
             }
             return columns;

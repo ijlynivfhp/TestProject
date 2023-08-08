@@ -15,7 +15,8 @@ namespace DTO
         public string Name { get; set; }
         public short ColOrder { get; set; }
         public string Type { get; set; }
-        public int IsNull { get; set; }
+        public short IsNull { get; set; }
+        public short Identity { get; set; }
         public string Default { get; set; }
     }
     #endregion

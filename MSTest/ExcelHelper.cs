@@ -7,6 +7,8 @@ using System.Data;
 using System.Diagnostics;
 using System;
 using Newtonsoft.Json;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace MSTest
 {
@@ -61,6 +63,12 @@ namespace MSTest
 
             //aaaa.PwId = 888;
             //var ttt = SqlHelper.Set<TestDto>(aaaa, new { Id = 18 });
+
+            new Task(async () =>
+            {
+                await Test();
+            }).Start();
+
             dynamic aaaa = new System.Dynamic.ExpandoObject();
             aaaa.PwId = 123; aaaa.WorkerName = "test";
             var tt =new List<object>();
@@ -70,6 +78,20 @@ namespace MSTest
                 tt.Add(aaaa);
             }
             var ttt = SqlHelper.AddList<TestDto>(tt);
+
+            Task Test() {
+                try
+                {
+                    throw new Exception("111111111");
+                }
+                catch (Exception ex)
+                {
+                    Console.Write(10000000000000);
+                }
+                return Task.CompletedTask;
+            }
+
+            Thread.Sleep(10000);
 
         }
         [TestMethod]

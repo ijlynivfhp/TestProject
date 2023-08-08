@@ -20,6 +20,9 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 using Newtonsoft.Json.Linq;
 using System.ComponentModel;
+using System.Collections.Concurrent;
+using DTO;
+using System.Xml.Linq;
 
 namespace CommonLibrary
 {
@@ -29,9 +32,11 @@ namespace CommonLibrary
     public sealed partial class SqlHelper
     {
         //加载appsetting.json
-        static IConfiguration configuration = new ConfigurationBuilder()
+        private readonly static IConfiguration configuration = new ConfigurationBuilder()
       .SetBasePath(Directory.GetCurrentDirectory())
      .AddJsonFile("appsettings.json").Build();
+
+        private static ConcurrentDictionary<string, List<SysColumn>> tableDic = new ConcurrentDictionary<string, List<SysColumn>>();
 
         /// <summary>
         /// 批量操作每批次记录数
@@ -56,18 +61,19 @@ namespace CommonLibrary
         /// <param name="tableName"></param>
         /// <param name="idName"></param>
         /// <returns></returns>
-        public static int Add<T>(object model, string tableName = default, string idName = default)
+        public static int Add<T>(object model, string tableName = default)
         {
             Type addType = typeof(T);
             var addProperties = addType.GetProperties();
 
-            idName = string.IsNullOrEmpty(idName) ? addProperties.FirstOrDefault(o => o.Name.ToLower().Contains("id"))?.Name ?? "Id" : idName;
+            if (string.IsNullOrEmpty(tableName))
+                tableName = addType.Name;
+
+            var idName = GetIdName(tableName,addProperties);
 
             var dic = ObjToDic(model);
             dic.Remove(idName);
 
-            if (string.IsNullOrEmpty(tableName))
-                tableName = addType.Name;
             string columnString = string.Join(",", dic.Select(p => string.Format("{0}", p.Key)));
             string valueString = string.Join(",", dic.Select(p => string.Format("@{0}", p.Key)));
             string sqlStr = $@"insert {tableName} ({columnString}) values ({valueString})
@@ -94,18 +100,19 @@ namespace CommonLibrary
         /// <param name="tableName"></param>
         /// <param name="idName"></param>
         /// <returns></returns>
-        public static int Set<T>(object model, object where = default, string tableName = default, string idName = default)
+        public static int Set<T>(object model, object where = default, string tableName = default)
         {
             Type addType = typeof(T);
             var addProperties = addType.GetProperties();
 
-            idName = string.IsNullOrEmpty(idName) ? addProperties.FirstOrDefault(o => o.Name.ToLower().Contains("id"))?.Name ?? "Id" : idName;
+            if (string.IsNullOrEmpty(tableName))
+                tableName = addType.Name;
 
             var dic = ObjToDic(model);
             var whereDic = ObjToDic(where);
 
-            if (string.IsNullOrEmpty(tableName))
-                tableName = addType.Name;
+            var idName = GetIdName(tableName, addProperties);
+
             var sqlStr = string.Empty;
             if (dic.ContainsKey(idName))
             {
@@ -145,14 +152,14 @@ namespace CommonLibrary
         /// <param name="tableName"></param>
         /// <param name="idName"></param>
         /// <returns></returns>
-        public static List<int> AddList<T>(List<object> objList, string tableName = default, string idName = default)
+        public static List<int> AddList<T>(List<object> objList, string tableName = default)
         {
             var list = new List<int>();
             try
             {
                 foreach (object obj in objList)
                 {
-                    list.Add(Add<T>(obj, tableName, idName));
+                    list.Add(Add<T>(obj, tableName));
                 }
             }
             catch { }
@@ -168,11 +175,11 @@ namespace CommonLibrary
         /// <param name="tableName"></param>
         /// <param name="idName"></param>
         /// <returns></returns>
-        public static int SetList<T>(List<Model> objList, object where = default, string tableName = default, string idName = default)
+        public static int SetList<T>(List<Model> objList, object where = default, string tableName = default)
         {
             try
             {
-                foreach (object obj in objList) Set<T>(obj, where, tableName, idName);
+                foreach (object obj in objList) Set<T>(obj, where, tableName);
                 return objList.Count;
             }
             catch { }
@@ -188,7 +195,7 @@ namespace CommonLibrary
         /// <param name="tableName"></param>
         /// <param name="fields"></param>
         /// <returns></returns>
-        public static T GetById<T>(object id, string tableName = default, string fields = "*", string idName = default)
+        public static T GetById<T>(object id, string tableName = default, string fields = "*")
         {
             Type type = typeof(T); var typeName = type.Name;
             var properties = type.GetProperties();
@@ -196,7 +203,7 @@ namespace CommonLibrary
             if (string.IsNullOrEmpty(tableName))
                 tableName = type.Name;
 
-            idName = string.IsNullOrEmpty(idName) ? properties.FirstOrDefault(o => o.Name.ToLower().Contains("id"))?.Name ?? "Id" : idName;
+            var idName = GetIdName(tableName, properties);
 
             var idType = id.GetType();
 
@@ -1533,6 +1540,12 @@ namespace CommonLibrary
         #endregion
 
         #region 私有方法
+
+        /// <summary>
+        /// object转字典
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
         private static Dictionary<string, object> ObjToDic(object model)
         {
             var dic = new Dictionary<string, object>();
@@ -1558,6 +1571,18 @@ namespace CommonLibrary
                 }
             }
             return dic;
+        }
+
+        /// <summary>
+        /// 获取表主键名称
+        /// </summary>
+        /// <param name="tableName"></param>
+        /// <returns></returns>
+        private static string GetIdName(string tableName, PropertyInfo[] addProperties)
+        {
+            if (!tableDic.ContainsKey(tableName))
+                tableDic.TryAdd(tableName, MSTest.SqlBulkCopyHelper.GetTableColumns(tableName));
+            return tableDic[tableName].Any(o => o.Identity == 1) ? tableDic[tableName].First(o => o.Identity == 1).Name : addProperties.FirstOrDefault(o => o.Name.ToLower().Contains("id"))?.Name ?? "Id";
         }
         #endregion
     }
