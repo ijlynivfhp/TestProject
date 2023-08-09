@@ -65,15 +65,24 @@ namespace MSTest
             //var ttt = SqlHelper.Set<TestDto>(aaaa, new { Id = 18 });
 
 
-            dynamic aaaa = new System.Dynamic.ExpandoObject();
-            aaaa.PwId = 123; aaaa.WorkerName = "test";
-            var tt =new List<object>();
-            for (int i = 0; i < 10; i++)
+            //dynamic dyc = new System.Dynamic.ExpandoObject();
+            //dyc.SyncType = 15;
+            //dyc.ProId = Guid.NewGuid();
+            //dyc.CreateUser = "CreateUser";
+            //dyc.CreateTime = DateTime.Now;
+
+            var dyc = new
             {
-                aaaa.PwId += 1;
-                tt.Add(aaaa);
-            }
-            var ttt = SqlHelper.AddList<TestDto>(tt);
+                SyncType = 15,
+                ProId = Guid.NewGuid(),
+                CreateUser = "CreateUser",
+                CreateTime = DateTime.Now
+            };
+
+            int ttt = SqlHelper.Add<dynamic>(dyc);
+
+            //dyc.UpdateUser = "UpdateUser";
+            int bbb = SqlHelper.Set<Sync_DataTransfer>(dyc);
 
         }
         [TestMethod]

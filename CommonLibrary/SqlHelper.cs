@@ -69,7 +69,7 @@ namespace CommonLibrary
             if (string.IsNullOrEmpty(tableName))
                 tableName = addType.Name;
 
-            var idName = GetIdName(tableName,addProperties);
+            var idName = GetIdName(tableName, addProperties);
 
             var dic = ObjToDic(model);
             dic.Remove(idName);
@@ -88,6 +88,11 @@ namespace CommonLibrary
                 var idValue = Convert.ToInt32(command.ExecuteScalar());
                 if (addType == model.GetType())
                     addType.GetProperty(idName).SetValue(model, idValue);
+                else
+                {
+                    if (model.GetType().Name == "ExpandoObject")
+                        ((IDictionary<string, object>)model).Add(idName, idValue);
+                }
                 return idValue;
             }
         }
@@ -129,6 +134,10 @@ namespace CommonLibrary
                     whereSql = whereDic.FirstOrDefault(o => o.Key == "WhereSql").Value.ToString() ?? string.Empty;
                     whereSql = whereSql.TrimStart().ToLower().StartsWith("and") ? whereSql : $"AND {whereSql}";
                     whereDic.Remove("WhereSql");
+                }
+                else
+                {
+                    return default;
                 }
                 string setStr = string.Join(",", dic.Select(p => string.Format("{0}=@{0}", p.Key)));
                 sqlStr = $@"update {tableName} set {setStr} where 1=1 {string.Join("", whereDic.Select(o => $" AND {o.Key}={(o.Value.GetType() == typeof(int) || o.Value.GetType() == typeof(long) ? o.Value : $"'{o.Value}'")} "))} {whereSql}";
