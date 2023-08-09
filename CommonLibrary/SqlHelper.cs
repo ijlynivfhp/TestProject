@@ -404,6 +404,12 @@ namespace CommonLibrary
         /// <param name="totalCount">总记录数</param>
         public static List<T> GetPager<T>(string tableName, string columns, string order, int pageSize, int pageIndex, string where, out int totalCount)
         {
+            if (string.IsNullOrEmpty(columns)) columns = "*";
+            if (string.IsNullOrEmpty(where)) where = "1=1";
+            if (string.IsNullOrEmpty(order)) order = "Id";
+            if (pageIndex == 0) pageIndex = 1;
+            if (pageSize == 0) pageSize = 20;
+
             //实例化一个List<>泛型集合  
             var dataList = new List<T>();
 
@@ -479,6 +485,7 @@ namespace CommonLibrary
                             dataList.Add(RowInstance);
                         }
                     }
+                    reader.NextResult();
                 }
                 catch { }
 
@@ -622,6 +629,7 @@ namespace CommonLibrary
                         }
                         list.Add(constructor.Invoke(values));
                     }
+                    reader.NextResult();
                 }
                 catch { }
 

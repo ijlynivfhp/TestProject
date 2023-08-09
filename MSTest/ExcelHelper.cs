@@ -47,8 +47,8 @@ namespace MSTest
             //var anonymous = new { PwId = 0, ProId = Guid.Empty };
             //var dd = SqlHelper.GetAnonymousList(anonymous.GetType(), "select top 100 * from Labor_ProjectWorker");
 
-            //var ee = SqlHelper.GetPager<dynamic>("Labor_ProjectWorker", "ProId,PwId,WorkerName", "AddTime desc", 10, 1, default, out int totalCount);
-            //var eee = SqlHelper.GetPager<TestDto>("Labor_ProjectWorker", "ProId,PwId,WorkerName", "AddTime desc", 10, 1, default, out int totalCount1);
+            var ee = SqlHelper.GetPager<dynamic>("Labor_ProjectWorker", "ProId,PwId,WorkerName", "AddTime desc", 10, 1, default, out int totalCount);
+            var eee = SqlHelper.GetPager<TestDto>("Labor_ProjectWorker", "ProId,PwId,WorkerName", "AddTime desc", 10, 1, default, out int totalCount1);
             //var eeee = SqlHelper.GetAnonymousPager(anonymous.GetType(), "Labor_ProjectWorker", "ProId,PwId,WorkerName", "AddTime desc", 10, 1, default, out int totalCount2);
             //var ff = SqlHelper.GetById<dynamic>(35, "[Labor_SyncBlackList]","Id");
 
@@ -79,7 +79,9 @@ namespace MSTest
                 CreateTime = DateTime.Now
             };
 
-            int ttt = SqlHelper.Add<dynamic>(dyc);
+            int ttt = SqlHelper.Add<Sync_DataTransfer>(dyc);
+
+            var tttt = SqlHelper.GetPager<object>("TestDto", "*","",2,0,"",out int totalCount2);
 
             //dyc.UpdateUser = "UpdateUser";
             int bbb = SqlHelper.Set<Sync_DataTransfer>(dyc);
