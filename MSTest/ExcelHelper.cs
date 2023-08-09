@@ -71,20 +71,20 @@ namespace MSTest
             //dyc.CreateUser = "CreateUser";
             //dyc.CreateTime = DateTime.Now;
 
-            var dyc = new
-            {
-                SyncType = 15,
-                ProId = Guid.NewGuid(),
-                CreateUser = "CreateUser",
-                CreateTime = DateTime.Now
-            };
+            //var dyc = new
+            //{
+            //    SyncType = 15,
+            //    ProId = Guid.NewGuid(),
+            //    CreateUser = "CreateUser",
+            //    CreateTime = DateTime.Now
+            //};
 
-            int ttt = SqlHelper.Add<Sync_DataTransfer>(dyc);
+            //int ttt = SqlHelper.Add<Sync_DataTransfer>(dyc);
 
-            var tttt = SqlHelper.GetPager<object>("TestDto", "*","",2,0,"",out int totalCount2);
+            var tttt = SqlHelper.GetPager<dynamic>("dbo.Labor_ProjectWorker pw INNER JOIN dbo.Labor_Worker w ON pw .WorkerId=w.WorkerId", "pw.PwId,w.WorkerId","w.WorkerId",20,1,"",out int totalCount);
 
             //dyc.UpdateUser = "UpdateUser";
-            int bbb = SqlHelper.Set<Sync_DataTransfer>(dyc);
+            //int bbb = SqlHelper.Set<Sync_DataTransfer>(dyc);
 
         }
         [TestMethod]

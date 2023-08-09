@@ -1527,32 +1527,36 @@ namespace CommonLibrary
         #endregion 批量操作
 
         #region 分页存储过程
-        private static string sp_Pager = $@"CREATE proc [dbo].[sp_Pager]
-            @tableName varchar(64),  --分页表名
-            @columns varchar(1000),  --查询的字段
-            @order varchar(256),    --排序方式
-            @pageSize int,  --每页大小
-            @pageIndex int,  --当前页
-            @where varchar(2000) = '1=1',  --查询条件
-            @totalCount int output  --总记录数
-            as
-            declare @beginIndex int,@endIndex int,@sqlResult nvarchar(2000),@sqlGetCount nvarchar(2000)
-            set @beginIndex = (@pageIndex - 1) * @pageSize + 1  --开始
-            set @endIndex = (@pageIndex) * @pageSize  --结束
-            set @sqlresult = 'select '+@columns+' from (
-            select row_number() over(order by '+ @order +')
-            as Rownum,'+@columns+'
-            from '+@tableName+' where '+ @where +') as T
-            where T.Rownum between ' + CONVERT(varchar(max),@beginIndex) + ' and ' + CONVERT(varchar(max),@endIndex)
-            set @sqlGetCount = 'select @totalCount = count(*) from '+@tablename+' where ' + @where  --总数
+        private static string sp_Pager = $@"CREATE PROC [dbo].[sp_Pager]
+                @tableName VARCHAR(MAX),     --分页表名
+                @columns VARCHAR(MAX),       --查询的字段
+                @order VARCHAR(MAX),         --排序方式
+                @pageSize INT,               --每页大小
+                @pageIndex INT,              --当前页
+                @where VARCHAR(MAX) = '1=1', --查询条件
+                @totalCount INT OUTPUT       --总记录数
+            AS
+            DECLARE @beginIndex INT,
+                    @endIndex INT,
+                    @sqlResult NVARCHAR(2000),
+                    @sqlGetCount NVARCHAR(2000);
+            SET @beginIndex = (@pageIndex - 1) * @pageSize + 1; --开始
+            SET @endIndex = (@pageIndex) * @pageSize; --结束
+            SET @sqlResult = N'select * from (
+            select row_number() over(order by ' + @order + N')
+            as RowNum,' + @columns + N'
+            from ' + @tableName + N' where ' + @where + N') as T
+            where T.RowNum between ' + CONVERT(VARCHAR(MAX), @beginIndex) + N' and ' + CONVERT(VARCHAR(MAX), @endIndex);
+            SET @sqlGetCount = N'select @totalCount = count(*) from ' + @tableName + N' where ' + @where; --总数
             --print @sqlresult
-            exec(@sqlresult)
-            exec sp_executesql @sqlGetCount,N'@totalCount int output',@totalCount output
+            EXEC (@sqlResult);
+            EXEC sp_executesql @sqlGetCount,
+                               N'@totalCount int output',
+                               @totalCount OUTPUT;
             --测试调用：
             --declare @total int
             --exec sp_Pager 'tbLoginInfo','Id,UserName,Success','LoginDate desc',4,2,'1=1',@total output
             --print @total
- 
             GO";
         #endregion
 
