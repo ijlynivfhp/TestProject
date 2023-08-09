@@ -550,9 +550,6 @@ namespace MSTest
                     INNER JOIN INFORMATION_SCHEMA.COLUMNS C
                         ON B.name = C.TABLE_NAME
                            AND C.COLUMN_NAME = A.name
-                    LEFT JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE E
-                        ON E.TABLE_NAME = C.TABLE_NAME
-                           AND E.COLUMN_NAME = A.name
                 WHERE B.xtype = 'U'
                       AND B.name = '{tableName}'
                 ORDER BY A.colid ASC");
