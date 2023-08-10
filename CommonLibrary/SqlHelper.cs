@@ -23,6 +23,9 @@ using System.ComponentModel;
 using System.Collections.Concurrent;
 using DTO;
 using System.Xml.Linq;
+using MSTest;
+using System.Data.Common;
+using System.Threading;
 
 namespace CommonLibrary
 {
@@ -91,7 +94,13 @@ namespace CommonLibrary
                 else
                 {
                     if (model.GetType().Name == "ExpandoObject")
-                        ((IDictionary<string, object>)model).Add(idName, idValue);
+                    {
+                        var dicModel = (IDictionary<string, object>)model;
+                        if (dicModel.ContainsKey(idName))
+                            dicModel[idName] = idValue;
+                        else
+                            dicModel.Add(idName, idValue);
+                    }
                 }
                 return idValue;
             }
@@ -176,6 +185,36 @@ namespace CommonLibrary
         }
 
         /// <summary>
+        /// 批量新增
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="objList"></param>
+        /// <param name="tableName"></param>
+        /// <returns></returns>
+        public static bool BulkAdd<T>(List<object> objList, string tableName = default)
+        {
+            try
+            {
+                Type addType = typeof(T);
+                var addProperties = addType.GetProperties();
+
+                if (string.IsNullOrEmpty(tableName))
+                    tableName = addType.Name;
+
+                var idName = GetIdName(tableName, addProperties);
+                var dt = ObjectToTable(objList, tableName);
+                dt.TableName = tableName;
+                if (dt.Columns.Contains(idName)) dt.Columns.Remove(idName);
+                BulkInsert(dt);
+            }
+            catch
+            {
+                return default;
+            }
+            return true;
+        }
+
+        /// <summary>
         /// 批量更新
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -193,6 +232,33 @@ namespace CommonLibrary
             }
             catch { }
             return default;
+        }
+
+        /// <summary>
+        /// 批量新增
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="objList"></param>
+        /// <param name="tableName"></param>
+        /// <returns></returns>
+        public static bool BulkSet<T>(List<object> objList, string tableName = default)
+        {
+            try
+            {
+                Type addType = typeof(T);
+                var addProperties = addType.GetProperties();
+
+                if (string.IsNullOrEmpty(tableName))
+                    tableName = addType.Name;
+                var dt = ObjectToTable(objList, tableName);
+                dt.TableName = tableName;
+                BatchUpdate(dt);
+            }
+            catch
+            {
+                return default;
+            }
+            return true;
         }
 
         /// <summary>
@@ -253,7 +319,7 @@ namespace CommonLibrary
                             if (reader.GetValue(Ordinal) != DBNull.Value)
                             {
                                 //将DataReader读取出来的数据填充到对象实体的属性里  
-                                Property.SetValue(RowInstance, Convert.ChangeType(reader.GetValue(Ordinal), Property.PropertyType), null);
+                                Property.SetValue(RowInstance, ChangeType(reader.GetValue(Ordinal), Property.PropertyType), default);
                             }
                         }
                         return RowInstance;
@@ -307,7 +373,7 @@ namespace CommonLibrary
                             if (reader.GetValue(Ordinal) != DBNull.Value)
                             {
                                 //将DataReader读取出来的数据填充到对象实体的属性里  
-                                Property.SetValue(RowInstance, Convert.ChangeType(reader.GetValue(Ordinal), Property.PropertyType), null);
+                                Property.SetValue(RowInstance, ChangeType(reader.GetValue(Ordinal), Property.PropertyType), default);
                             }
                         }
                         return RowInstance;
@@ -370,7 +436,8 @@ namespace CommonLibrary
                                     if (reader.GetValue(Ordinal) != DBNull.Value)
                                     {
                                         //将DataReader读取出来的数据填充到对象实体的属性里  
-                                        Property.SetValue(RowInstance, Convert.ChangeType(reader.GetValue(Ordinal), Property.PropertyType), null);
+                                        //Property.SetValue(RowInstance, ChangeType(reader.GetValue(Ordinal), Property.PropertyType), default);
+                                        Property.SetValue(RowInstance, ChangeType(reader.GetValue(Ordinal), Property.PropertyType), default);
                                     }
                                 }
                                 catch
@@ -474,7 +541,7 @@ namespace CommonLibrary
                                     if (reader.GetValue(Ordinal) != DBNull.Value)
                                     {
                                         //将DataReader读取出来的数据填充到对象实体的属性里  
-                                        Property.SetValue(RowInstance, Convert.ChangeType(reader.GetValue(Ordinal), Property.PropertyType), null);
+                                        Property.SetValue(RowInstance, ChangeType(reader.GetValue(Ordinal), Property.PropertyType), default);
                                     }
                                 }
                                 catch
@@ -527,14 +594,14 @@ namespace CommonLibrary
                             {
                                 if (!parameter.ParameterType.IsGenericType)
                                 {
-                                    itemValue = Convert.ChangeType(fieldValue, parameter.ParameterType);
+                                    itemValue = ChangeType(fieldValue, parameter.ParameterType);
                                 }
                                 else
                                 {
                                     Type genericTypeDefinition = parameter.ParameterType.GetGenericTypeDefinition();
                                     if (genericTypeDefinition == typeof(Nullable<>))
                                     {
-                                        itemValue = Convert.ChangeType(fieldValue, Nullable.GetUnderlyingType(parameter.ParameterType));
+                                        itemValue = ChangeType(fieldValue, Nullable.GetUnderlyingType(parameter.ParameterType));
                                     }
                                 }
                             }
@@ -620,14 +687,14 @@ namespace CommonLibrary
                             {
                                 if (!parameter.ParameterType.IsGenericType)
                                 {
-                                    itemValue = Convert.ChangeType(fieldValue, parameter.ParameterType);
+                                    itemValue = ChangeType(fieldValue, parameter.ParameterType);
                                 }
                                 else
                                 {
                                     Type genericTypeDefinition = parameter.ParameterType.GetGenericTypeDefinition();
                                     if (genericTypeDefinition == typeof(Nullable<>))
                                     {
-                                        itemValue = Convert.ChangeType(fieldValue, Nullable.GetUnderlyingType(parameter.ParameterType));
+                                        itemValue = ChangeType(fieldValue, Nullable.GetUnderlyingType(parameter.ParameterType));
                                     }
                                 }
                             }
@@ -997,7 +1064,7 @@ namespace CommonLibrary
             object result = GetField(connectionString, commandText, parms);
             if (result != null)
             {
-                return (T)Convert.ChangeType(result, typeof(T)); ;
+                return (T)ChangeType(result, typeof(T)); ;
             }
             return default(T);
         }
@@ -1579,11 +1646,23 @@ namespace CommonLibrary
         #region 私有方法
 
         /// <summary>
+        /// 获取表主键名称
+        /// </summary>
+        /// <param name="tableName"></param>
+        /// <returns></returns>
+        private static string GetIdName(string tableName, PropertyInfo[] addProperties)
+        {
+            if (!tableDic.ContainsKey(tableName))
+                tableDic.TryAdd(tableName, MSTest.SqlBulkCopyHelper.GetTableColumns(tableName));
+            return tableDic[tableName].Any(o => o.Identity == 1) ? tableDic[tableName].First(o => o.Identity == 1).Name : addProperties.FirstOrDefault(o => o.Name.ToLower().Contains("id"))?.Name ?? "Id";
+        }
+
+        /// <summary>
         /// object转字典
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        private static Dictionary<string, object> ObjToDic(object model)
+        public static Dictionary<string, object> ObjToDic(object model)
         {
             var dic = new Dictionary<string, object>();
             if (model is null) return dic;
@@ -1592,6 +1671,14 @@ namespace CommonLibrary
             var typeName = type.Name;
             if (typeName == "ExpandoObject")
                 dic = ((IEnumerable<KeyValuePair<string, object>>)model).ToDictionary(o => o.Key, o => o.Value);
+            else if (typeName == "JObject")
+            {
+                var properties = ((JObject)model).Properties();
+                foreach (JProperty item in properties)
+                {
+                    dic.Add(item.Name, item.Value);
+                }
+            }
             else if (typeName.Contains("<>") && typeName.Contains("__") && typeName.Contains("AnonymousType"))
             {
                 var constructor = type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
@@ -1611,16 +1698,101 @@ namespace CommonLibrary
         }
 
         /// <summary>
-        /// 获取表主键名称
+        /// object转DataTable
         /// </summary>
-        /// <param name="tableName"></param>
+        /// <param name="obj"></param>
         /// <returns></returns>
-        private static string GetIdName(string tableName, PropertyInfo[] addProperties)
+        public static DataTable ObjectToTable(object obj, string tableName = default)
         {
-            if (!tableDic.ContainsKey(tableName))
-                tableDic.TryAdd(tableName, MSTest.SqlBulkCopyHelper.GetTableColumns(tableName));
-            return tableDic[tableName].Any(o => o.Identity == 1) ? tableDic[tableName].First(o => o.Identity == 1).Name : addProperties.FirstOrDefault(o => o.Name.ToLower().Contains("id"))?.Name ?? "Id";
+            try
+            {
+                Type t;
+                if (obj.GetType().IsGenericType)
+                {
+                    t = obj.GetType().GetGenericTypeDefinition();
+                }
+                else
+                {
+                    t = obj.GetType();
+                }
+                if (t == typeof(List<>) ||
+                    t == typeof(IEnumerable<>))
+                {
+                    DataTable dt = new DataTable();
+                    IEnumerable<object> lstenum = obj as IEnumerable<object>;
+                    if (lstenum.Count() > 0)
+                    {
+                        var columnDic = ObjToDic(lstenum.First());
+                        foreach (var item in columnDic)
+                        {
+                            dt.Columns.Add(new DataColumn() { ColumnName = item.Key, DataType = SqlBulkCopyHelper.SqlTypeString2CsharpType(tableDic[tableName].First(o => o.Name == item.Key).Type) });
+                        }
+                        //数据
+                        foreach (var item in lstenum)
+                        {
+                            var row = dt.NewRow();
+                            var rowDic = ObjToDic(item);
+                            foreach (var sub in rowDic)
+                            {
+                                row[sub.Key] = sub.Value ?? DBNull.Value;
+                            }
+                            dt.Rows.Add(row);
+                        }
+                        return dt;
+                    }
+                }
+                else if (t == typeof(DataTable))
+                {
+                    return (DataTable)obj;
+                }
+                else   //(t==typeof(Object))
+                {
+                    var dt = new DataTable();
+                    foreach (var item in obj.GetType().GetProperties())
+                    {
+                        dt.Columns.Add(new DataColumn() { ColumnName = item.Name });
+                    }
+                    var row = dt.NewRow();
+                    foreach (var item in obj.GetType().GetProperties())
+                    {
+                        row[item.Name] = item.GetValue(obj, default);
+                    }
+                    dt.Rows.Add(row);
+                    return dt;
+                }
+
+            }
+            catch {
+                return default;
+            }
+            return default;
         }
+
+        #region = ChangeType加强版 =
+        public static object ChangeType(object obj, Type conversionType)
+        {
+            return ChangeType(obj, conversionType, Thread.CurrentThread.CurrentCulture);
+        }
+        public static object ChangeType(object obj, Type conversionType, IFormatProvider provider)
+        {
+            #region Nullable
+            Type nullableType = Nullable.GetUnderlyingType(conversionType);
+            if (nullableType != null)
+            {
+                if (obj == null)
+                {
+                    return null;
+                }
+                return ChangeType(obj, nullableType, provider);
+            }
+            #endregion
+            if (typeof(System.Enum).IsAssignableFrom(conversionType))
+            {
+                return Enum.Parse(conversionType, obj.ToString());
+            }
+            return ChangeType(obj, conversionType, provider);
+        }
+        #endregion
         #endregion
     }
 }

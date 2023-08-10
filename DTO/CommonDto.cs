@@ -439,4 +439,346 @@ namespace DTO
         }
         #endregion
     }
+
+    public partial class Labor_ProjectWorker
+    {
+        #region 私有成员
+        private Int32? _PwId;
+        private Int32? _WorkerId;
+        private Guid? _ProId;
+        private Int32? _JoinStatus;
+        private Int32? _BizStatus;
+        private Int32? _AuthStatus;
+        private Int32? _LockStatus;
+        private Int32? _PersonType;
+        private Int32? _TeamId;
+        private String _TeamName;
+        private Int32? _GroupId;
+        private String _GroupName;
+        private Int32? _IsGroupLeader;
+        private String _WorkerTypeCode;
+        private String _WorkerTypeName;
+        private Int32? _PaperSigned;
+        private DateTime? _JoinTime;
+        private DateTime? _QuitTime;
+        private Int32? _JoinTrainingStatus;
+        private DateTime? _LastTrainingDate;
+        private Decimal? _LastTrainingHour;
+        private Int32? _TotalWorkDay;
+        private Decimal? _TotalSalary;
+        private String _BankNamePro;
+        private String _BankAccountPro;
+        private String _BankCodePro;
+        private Int32? _DeleteStatus;
+        private Int32? _CreateUserId;
+        private Int32? _LastEditUserId;
+        private String _LastEditor;
+        private String _Creator;
+        private Int32? _AddTime;
+        private Int32? _UpdateTime;
+        private String _WorkerName;
+        private Int32? _SyncAddResult;
+        private Int32? _WorkerSubTypeId;
+        private String _WorkerSubTypeName;
+        #endregion
+
+        #region 公共成员
+        /// <summary>
+        /// 
+        /// </summary>
+        public Int32? PwId
+        {
+            get { return _PwId; }
+            set { _PwId = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public Int32? WorkerId
+        {
+            get { return _WorkerId; }
+            set { _WorkerId = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public Guid? ProId
+        {
+            get { return _ProId; }
+            set { _ProId = value; }
+        }
+        /// <summary>
+        /// 0退场,1入场
+        /// </summary>
+        public Int32? JoinStatus
+        {
+            get { return _JoinStatus; }
+            set { _JoinStatus = value; }
+        }
+        /// <summary>
+        /// 异常状态（复合值），0正常，1长期未刷卡，2未安全教育
+        /// </summary>
+        public Int32? BizStatus
+        {
+            get { return _BizStatus; }
+            set { _BizStatus = value; }
+        }
+        /// <summary>
+        /// 0未授权，1已授权
+        /// </summary>
+        public Int32? AuthStatus
+        {
+            get { return _AuthStatus; }
+            set { _AuthStatus = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public Int32? LockStatus
+        {
+            get { return _LockStatus; }
+            set { _LockStatus = value; }
+        }
+        /// <summary>
+        /// 业务类别。0是工人，1是管理人员
+        /// </summary>
+        public Int32? PersonType
+        {
+            get { return _PersonType; }
+            set { _PersonType = value; }
+        }
+        /// <summary>
+        /// 劳务分包/专业分包队ID
+        /// </summary>
+        public Int32? TeamId
+        {
+            get { return _TeamId; }
+            set { _TeamId = value; }
+        }
+        /// <summary>
+        /// 劳务分包/专业分包队名称
+        /// </summary>
+        public String TeamName
+        {
+            get { return _TeamName; }
+            set { _TeamName = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public Int32? GroupId
+        {
+            get { return _GroupId; }
+            set { _GroupId = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public String GroupName
+        {
+            get { return _GroupName; }
+            set { _GroupName = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public Int32? IsGroupLeader
+        {
+            get { return _IsGroupLeader; }
+            set { _IsGroupLeader = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public String WorkerTypeCode
+        {
+            get { return _WorkerTypeCode; }
+            set { _WorkerTypeCode = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public String WorkerTypeName
+        {
+            get { return _WorkerTypeName; }
+            set { _WorkerTypeName = value; }
+        }
+        /// <summary>
+        /// 是否已经签合同，0未签1已签
+        /// </summary>
+        public Int32? PaperSigned
+        {
+            get { return _PaperSigned; }
+            set { _PaperSigned = value; }
+        }
+        /// <summary>
+        /// 进场时间
+        /// </summary>
+        public DateTime? JoinTime
+        {
+            get { return _JoinTime; }
+            set { _JoinTime = value; }
+        }
+        /// <summary>
+        /// 退场时间
+        /// </summary>
+        public DateTime? QuitTime
+        {
+            get { return _QuitTime; }
+            set { _QuitTime = value; }
+        }
+        /// <summary>
+        /// 入场安全培训状态0未培训，1已培训
+        /// </summary>
+        public Int32? JoinTrainingStatus
+        {
+            get { return _JoinTrainingStatus; }
+            set { _JoinTrainingStatus = value; }
+        }
+        /// <summary>
+        /// 培训日期
+        /// </summary>
+        public DateTime? LastTrainingDate
+        {
+            get { return _LastTrainingDate; }
+            set { _LastTrainingDate = value; }
+        }
+        /// <summary>
+        /// 培训课时
+        /// </summary>
+        public Decimal? LastTrainingHour
+        {
+            get { return _LastTrainingHour; }
+            set { _LastTrainingHour = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public Int32? TotalWorkDay
+        {
+            get { return _TotalWorkDay; }
+            set { _TotalWorkDay = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public Decimal? TotalSalary
+        {
+            get { return _TotalSalary; }
+            set { _TotalSalary = value; }
+        }
+        /// <summary>
+        /// 开户银行
+        /// </summary>
+        public String BankNamePro
+        {
+            get { return _BankNamePro; }
+            set { _BankNamePro = value; }
+        }
+        /// <summary>
+        /// 银行卡号
+        /// </summary>
+        public String BankAccountPro
+        {
+            get { return _BankAccountPro; }
+            set { _BankAccountPro = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public String BankCodePro
+        {
+            get { return _BankCodePro; }
+            set { _BankCodePro = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public Int32? DeleteStatus
+        {
+            get { return _DeleteStatus; }
+            set { _DeleteStatus = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public Int32? CreateUserId
+        {
+            get { return _CreateUserId; }
+            set { _CreateUserId = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public Int32? LastEditUserId
+        {
+            get { return _LastEditUserId; }
+            set { _LastEditUserId = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public String LastEditor
+        {
+            get { return _LastEditor; }
+            set { _LastEditor = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public String Creator
+        {
+            get { return _Creator; }
+            set { _Creator = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public Int32? AddTime
+        {
+            get { return _AddTime; }
+            set { _AddTime = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public Int32? UpdateTime
+        {
+            get { return _UpdateTime; }
+            set { _UpdateTime = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public String WorkerName
+        {
+            get { return _WorkerName; }
+            set { _WorkerName = value; }
+        }
+        /// <summary>
+        /// 全国平台添加结果
+        /// </summary>
+        public Int32? SyncAddResult
+        {
+            get { return _SyncAddResult; }
+            set { _SyncAddResult = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public Int32? WorkerSubTypeId
+        {
+            get { return _WorkerSubTypeId; }
+            set { _WorkerSubTypeId = value; }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public String WorkerSubTypeName
+        {
+            get { return _WorkerSubTypeName; }
+            set { _WorkerSubTypeName = value; }
+        }
+        #endregion
+    }
 }

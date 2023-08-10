@@ -81,12 +81,34 @@ namespace MSTest
 
             //int ttt = SqlHelper.Add<Sync_DataTransfer>(dyc);
 
-            var tttt = SqlHelper.GetPager<dynamic>("dbo.Labor_ProjectWorker pw INNER JOIN dbo.Labor_Worker w ON pw .WorkerId=w.WorkerId", "pw.PwId,w.WorkerId", "w.WorkerId", 20, 1, "", out int totalCount1);
+            //var aa = new { PwId = 0, ProId = Guid.Empty, WorkerId = default(int?) };
 
-            var bb = SqlHelper.GetAnonymousPager(new { PwId = 0, WorkerId = 0 }.GetType(), "dbo.Labor_ProjectWorker pw INNER JOIN dbo.Labor_Worker w ON pw .WorkerId=w.WorkerId", "pw.PwId,w.WorkerId", "w.WorkerId", 20, 1, "", out int totalCount2);
-            var eeee = SqlHelper.GetAnonymousPager(new { PwId = 0, ProId = Guid.Empty }.GetType(), "Labor_ProjectWorker", "ProId,PwId,WorkerName", "AddTime desc", 10, 1, default, out int totalCount3);
+
+            //var aaList = SqlHelper.ObjectToTable(new List<object>() { aa, aa });
+
+            //var aaa = JsonConvert.DeserializeObject<List<dynamic>>(JsonConvert.SerializeObject(new List<object>() { aa, aa }));
+
+            //dynamic eee = new System.Dynamic.ExpandoObject();
+            //eee.aa = 1;
+            //eee.bb = Guid.Empty;
+
+            //var aaaList = SqlHelper.ObjectToTable(aaa);
+
+
+            //var tttt = SqlHelper.GetPager<dynamic>("dbo.Labor_ProjectWorker pw INNER JOIN dbo.Labor_Worker w ON pw .WorkerId=w.WorkerId", "pw.PwId,w.WorkerId", "w.WorkerId", 20, 1, "", out int totalCount1);
+
+            //var bb = SqlHelper.GetAnonymousPager(new { PwId = 0, WorkerId = 0 }.GetType(), "dbo.Labor_ProjectWorker pw INNER JOIN dbo.Labor_Worker w ON pw .WorkerId=w.WorkerId", "pw.PwId,w.WorkerId", "w.WorkerId", 20, 1, "", out int totalCount2);
+            //var eeee = SqlHelper.GetAnonymousPager(new { PwId = 0, ProId = Guid.Empty }.GetType(), "Labor_ProjectWorker", "ProId,PwId,WorkerName", "AddTime desc", 10, 1, default, out int totalCount3);
             //dyc.UpdateUser = "UpdateUser";
             //int bbb = SqlHelper.Set<Sync_DataTransfer>(dyc);
+
+            var bbbb = SqlHelper.GetList<Labor_ProjectWorker>("select top 10000 * from Labor_ProjectWorker");
+            bbbb.ForEach(o => o.LastTrainingDate = DateTime.Now);
+            var st = Stopwatch.StartNew();
+            //var aa = SqlHelper.AddList<Labor_ProjectWorker>(bbbb);
+            var aa=SqlHelper.BulkAdd<Labor_ProjectWorker>(bbbb.Select(o=>(object)o).ToList());
+            st.Stop();
+            var stt = st.Elapsed.TotalSeconds;
 
         }
         [TestMethod]
