@@ -202,7 +202,7 @@ namespace CommonLibrary
                     tableName = addType.Name;
 
                 var idName = GetIdName(tableName, addProperties);
-                var dt = ObjectToTable(objList, tableName);
+                var dt = ObjectToTable(objList, addProperties);
                 dt.TableName = tableName;
                 if (dt.Columns.Contains(idName)) dt.Columns.Remove(idName);
                 BulkInsert(dt);
@@ -250,8 +250,9 @@ namespace CommonLibrary
 
                 if (string.IsNullOrEmpty(tableName))
                     tableName = addType.Name;
-                var dt = ObjectToTable(objList, tableName);
+                var dt = ObjectToTable(objList, addProperties);
                 dt.TableName = tableName;
+                dt.ExtendedProperties.Add("SQL", $"SELECT TOP(0) * FROM {tableName}");
                 BatchUpdate(dt);
             }
             catch
@@ -1702,7 +1703,7 @@ namespace CommonLibrary
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
-        public static DataTable ObjectToTable(object obj, string tableName = default)
+        public static DataTable ObjectToTable(object obj, PropertyInfo[] addProperties)
         {
             try
             {
@@ -1725,7 +1726,9 @@ namespace CommonLibrary
                         var columnDic = ObjToDic(lstenum.First());
                         foreach (var item in columnDic)
                         {
-                            dt.Columns.Add(new DataColumn() { ColumnName = item.Key, DataType = SqlBulkCopyHelper.SqlTypeString2CsharpType(tableDic[tableName].First(o => o.Name == item.Key).Type) });
+                            var dataType = addProperties.FirstOrDefault(o => o.Name == item.Key).PropertyType;
+                            if (dataType.IsGenericType && dataType.GetGenericTypeDefinition() == typeof(Nullable<>)) dataType = dataType.GetGenericArguments()[0];
+                            dt.Columns.Add(new DataColumn() { ColumnName = item.Key, DataType = dataType });//SqlBulkCopyHelper.SqlTypeString2CsharpType(tableDic[tableName].First(o => o.Name == item.Key).Type
                         }
                         //数据
                         foreach (var item in lstenum)
@@ -1762,7 +1765,8 @@ namespace CommonLibrary
                 }
 
             }
-            catch {
+            catch
+            {
                 return default;
             }
             return default;
@@ -1783,14 +1787,14 @@ namespace CommonLibrary
                 {
                     return null;
                 }
-                return ChangeType(obj, nullableType, provider);
+                return Convert.ChangeType(obj, nullableType, provider);
             }
             #endregion
             if (typeof(System.Enum).IsAssignableFrom(conversionType))
             {
                 return Enum.Parse(conversionType, obj.ToString());
             }
-            return ChangeType(obj, conversionType, provider);
+            return Convert.ChangeType(obj, conversionType, provider);
         }
         #endregion
         #endregion

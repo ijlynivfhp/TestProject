@@ -106,7 +106,9 @@ namespace MSTest
             bbbb.ForEach(o => o.LastTrainingDate = DateTime.Now);
             var st = Stopwatch.StartNew();
             //var aa = SqlHelper.AddList<Labor_ProjectWorker>(bbbb);
-            var aa=SqlHelper.BulkAdd<Labor_ProjectWorker>(bbbb.Select(o=>(object)o).ToList());
+            //var aa = SqlHelper.BulkAdd<Labor_ProjectWorker>(bbbb.Select(o => (object)o).ToList());
+            var aaa = SqlHelper.BulkSet<Labor_ProjectWorker>(bbbb.Select(o => (object)o).ToList());
+
             st.Stop();
             var stt = st.Elapsed.TotalSeconds;
 
