@@ -399,7 +399,7 @@ namespace CommonLibrary
         /// <param name="columns">要取的列名（逗号分开）</param>
         /// <param name="order">排序</param>
         /// <param name="pageSize">每页大小</param>
-        /// <param name="pageIndex">当前页</param>
+        /// <param name="pageIndex">当前页(默认从1开始)</param>
         /// <param name="where">查询条件</param>
         /// <param name="totalCount">总记录数</param>
         public static List<T> GetPager<T>(string tableName, string columns, string order, int pageSize, int pageIndex, string where, out int totalCount)
@@ -560,11 +560,17 @@ namespace CommonLibrary
         /// <param name="columns">要取的列名（逗号分开）</param>
         /// <param name="order">排序</param>
         /// <param name="pageSize">每页大小</param>
-        /// <param name="pageIndex">当前页</param>
+        /// <param name="pageIndex">当前页(默认从1开始)</param>
         /// <param name="where">查询条件</param>
         /// <param name="totalCount">总记录数</param>
         public static IList GetAnonymousPager(Type anonymousType, string tableName, string columns, string order, int pageSize, int pageIndex, string where, out int totalCount)
         {
+            if (string.IsNullOrEmpty(columns)) columns = "*";
+            if (string.IsNullOrEmpty(where)) where = "1=1";
+            if (string.IsNullOrEmpty(order)) order = "Id";
+            if (pageIndex == 0) pageIndex = 1;
+            if (pageSize == 0) pageSize = 20;
+
             Type typeMaster = typeof(List<>);
             Type listType = typeMaster.MakeGenericType(anonymousType);
             var list = Activator.CreateInstance(listType) as IList;
@@ -1532,7 +1538,7 @@ namespace CommonLibrary
                 @columns VARCHAR(MAX),       --查询的字段
                 @order VARCHAR(MAX),         --排序方式
                 @pageSize INT,               --每页大小
-                @pageIndex INT,              --当前页
+                @pageIndex INT,              --当前页默认从1开始
                 @where VARCHAR(MAX) = '1=1', --查询条件
                 @totalCount INT OUTPUT       --总记录数
             AS
@@ -1540,6 +1546,16 @@ namespace CommonLibrary
                     @endIndex INT,
                     @sqlResult NVARCHAR(2000),
                     @sqlGetCount NVARCHAR(2000);
+            IF @columns IS NULL
+                SET @columns = '*';
+            IF @where IS NULL
+                SET @where = '1=1';
+            IF @order IS NULL
+                SET @order = 'Id DESC';
+            IF @pageIndex = 0
+                SET @pageIndex = 1;
+            IF @pageSize = 0
+                SET @pageSize = 20;
             SET @beginIndex = (@pageIndex - 1) * @pageSize + 1; --开始
             SET @endIndex = (@pageIndex) * @pageSize; --结束
             SET @sqlResult = N'select * from (

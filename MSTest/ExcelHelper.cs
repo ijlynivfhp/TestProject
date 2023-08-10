@@ -81,8 +81,10 @@ namespace MSTest
 
             //int ttt = SqlHelper.Add<Sync_DataTransfer>(dyc);
 
-            var tttt = SqlHelper.GetPager<dynamic>("dbo.Labor_ProjectWorker pw INNER JOIN dbo.Labor_Worker w ON pw .WorkerId=w.WorkerId", "pw.PwId,w.WorkerId","w.WorkerId",20,1,"",out int totalCount);
+            var tttt = SqlHelper.GetPager<dynamic>("dbo.Labor_ProjectWorker pw INNER JOIN dbo.Labor_Worker w ON pw .WorkerId=w.WorkerId", "pw.PwId,w.WorkerId", "w.WorkerId", 20, 1, "", out int totalCount1);
 
+            var bb = SqlHelper.GetAnonymousPager(new { PwId = 0, WorkerId = 0 }.GetType(), "dbo.Labor_ProjectWorker pw INNER JOIN dbo.Labor_Worker w ON pw .WorkerId=w.WorkerId", "pw.PwId,w.WorkerId", "w.WorkerId", 20, 1, "", out int totalCount2);
+            var eeee = SqlHelper.GetAnonymousPager(new { PwId = 0, ProId = Guid.Empty }.GetType(), "Labor_ProjectWorker", "ProId,PwId,WorkerName", "AddTime desc", 10, 1, default, out int totalCount3);
             //dyc.UpdateUser = "UpdateUser";
             //int bbb = SqlHelper.Set<Sync_DataTransfer>(dyc);
 
