@@ -102,12 +102,20 @@ namespace MSTest
             //dyc.UpdateUser = "UpdateUser";
             //int bbb = SqlHelper.Set<Sync_DataTransfer>(dyc);
 
-            var bbbb = SqlHelper.GetList<Labor_ProjectWorker>("select top 10000 * from Labor_ProjectWorker");
-            bbbb.ForEach(o => o.LastTrainingDate = DateTime.Now);
+            //var bbbb = SqlHelper.GetList<Labor_ProjectWorker>("select top 10 * from Labor_ProjectWorker");
+            //bbbb.ForEach(o => o.LastTrainingDate = DateTime.Now);
             var st = Stopwatch.StartNew();
             //var aa = SqlHelper.AddList<Labor_ProjectWorker>(bbbb);
             //var aa = SqlHelper.BulkAdd<Labor_ProjectWorker>(bbbb.Select(o => (object)o).ToList());
-            var aaa = SqlHelper.BulkSet<Labor_ProjectWorker>(bbbb.Select(o => (object)o).ToList());
+            //var aaa = SqlHelper.BulkSet<Labor_ProjectWorker>(bbbb.Select(o => (object)o).ToList());
+
+            var aa = SqlHelper.GetList<Labor_ProjectWorker>("select top 1 * from Labor_ProjectWorker");
+            aa.ForEach(o => o.LastTrainingDate = DateTime.Now);
+            //var bb = SqlHelper.BulkCopyAddTran("Labor_ProjectWorker", aa.Select(o => (object)o).ToList());
+            //var cc = SqlHelper.BulkCopySetTran("Labor_ProjectWorker", aa.Select(o => (object)o).ToList());
+
+            var dd = SqlHelper.BulkCopyAddAndSet(new Dictionary<string, List<object>> { { "Labor_ProjectWorker", aa.Select(o => (object)o).ToList() } },
+                new Dictionary<string, List<object>> { { "Labor_ProjectWorker", aa.Select(o => (object)o).ToList() } });
 
             st.Stop();
             var stt = st.Elapsed.TotalSeconds;

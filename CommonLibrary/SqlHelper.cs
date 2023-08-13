@@ -26,6 +26,7 @@ using System.Xml.Linq;
 using MSTest;
 using System.Data.Common;
 using System.Threading;
+using System.Transactions;
 
 namespace CommonLibrary
 {
@@ -34,28 +35,37 @@ namespace CommonLibrary
     /// </summary>
     public sealed partial class SqlHelper
     {
-        //加载appsetting.json
-        private readonly static IConfiguration configuration = new ConfigurationBuilder()
-      .SetBasePath(Directory.GetCurrentDirectory())
-     .AddJsonFile("appsettings.json").Build();
+        /// <summary>
+        /// 临时表前缀
+        /// </summary>
+        private const string tempTablePre = "#Temp";
 
+        /// <summary>
+        /// appsetting.json加载
+        /// </summary>
+        private readonly static IConfiguration configuration = new ConfigurationBuilder() .SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json").Build();
+
+        /// <summary>
+        /// 数据库连接字符串
+        /// </summary>
+        private readonly static string connectionString = configuration["DBSetting:ConnectString"];
+
+        /// <summary>
+        /// 表字段明细字典集合
+        /// </summary>
         private static ConcurrentDictionary<string, List<SysColumn>> tableDic = new ConcurrentDictionary<string, List<SysColumn>>();
 
         /// <summary>
         /// 批量操作每批次记录数
         /// </summary>
-        public static int BatchSize = 2000;
+        private const int BatchSize = 2000;
 
         /// <summary>
         /// 超时时间
         /// </summary>
-        public static int CommandTimeOut = 600;
+        private const int CommandTimeOut = 60 * 60 * 1;
 
-        /// <summary>
-        /// 数据库连接字符串
-        /// </summary>
-        public static string connectionString = configuration["DBSetting:ConnectString"];
-
+        #region 常用增删改查
         /// <summary>
         /// 插入对象
         /// </summary>
@@ -201,10 +211,8 @@ namespace CommonLibrary
                 if (string.IsNullOrEmpty(tableName))
                     tableName = addType.Name;
 
-                var idName = GetIdName(tableName, addProperties);
-                var dt = ObjectToTable(objList, addProperties);
+                var dt = ObjectToTable(objList, tableName);
                 dt.TableName = tableName;
-                if (dt.Columns.Contains(idName)) dt.Columns.Remove(idName);
                 BulkInsert(dt);
             }
             catch
@@ -250,7 +258,7 @@ namespace CommonLibrary
 
                 if (string.IsNullOrEmpty(tableName))
                     tableName = addType.Name;
-                var dt = ObjectToTable(objList, addProperties);
+                var dt = ObjectToTable(objList, tableName);
                 dt.TableName = tableName;
                 dt.ExtendedProperties.Add("SQL", $"SELECT TOP(0) * FROM {tableName}");
                 BatchUpdate(dt);
@@ -712,6 +720,643 @@ namespace CommonLibrary
 
             return list;
         }
+        #endregion
+
+        #region 批量操作(非事务)
+        /// <summary>
+        /// 执行SqlBulkCopy批量插入(支持对象集合)
+        /// </summary>
+        /// <param name="tables"></param>
+        /// <param name="addList"></param>
+        /// <returns></returns>
+        public static bool BulkCopyAdd(string tables, params List<object>[] addList)
+        {
+            if (string.IsNullOrEmpty(tables) || addList.Length == 0) return default;
+            var tableNameArr = tables.Split(',');
+            if (tableNameArr.Length != addList.Length) return default;
+            var tableList = new List<DataTable>();
+            for (int i = 0; i < tableNameArr.Length; i++)
+            {
+                var tableName = tableNameArr[i];
+                var table = ObjectToTable(addList[i], tableName);
+                table.TableName = tableName;
+                tableList.Add(table);
+            }
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                var sqlbulkcopy = new SqlBulkCopy(conn) { BulkCopyTimeout = CommandTimeOut };
+
+                try
+                {
+                    foreach (var item in tableList)
+                    {
+                        sqlbulkcopy.ColumnMappings.Clear();
+                        sqlbulkcopy.DestinationTableName = item.TableName;
+                        for (int i = 0; i < item.Columns.Count; i++)
+                        {
+                            sqlbulkcopy.ColumnMappings.Add(item.Columns[i].ColumnName, item.Columns[i].ColumnName);
+                        }
+                        sqlbulkcopy.WriteToServerAsync(item);
+                    }
+                }
+                catch
+                {
+                    return default;
+                }
+                finally
+                {
+                    sqlbulkcopy.Close();
+                    conn.Close();
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 执行SqlBulkCopy批量插入(支持对象集合)
+        /// </summary>
+        /// <param name="addDic"></param>
+        /// <returns></returns>
+        public static bool BulkCopyAdd(Dictionary<string, List<object>> addDic)
+        {
+            var addTbList = new List<DataTable>();
+            foreach (var item in addDic)
+            {
+                var tableName = item.Key;
+                var table = ObjectToTable(item.Value, tableName);
+                table.TableName = tableName;
+                addTbList.Add(table);
+            }
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                var sqlbulkcopy = new SqlBulkCopy(conn) { BulkCopyTimeout = CommandTimeOut };
+
+                try
+                {
+                    addTbList.ForEach(o =>
+                    {
+                        sqlbulkcopy.ColumnMappings.Clear();
+                        sqlbulkcopy.DestinationTableName = o.TableName;
+                        foreach (DataColumn item in o.Columns) sqlbulkcopy.ColumnMappings.Add(item.ColumnName, item.ColumnName);
+                        sqlbulkcopy.WriteToServer(o);
+                    });
+                }
+                catch
+                {
+                    return default;
+                }
+                finally
+                {
+                    sqlbulkcopy.Close();
+                    conn.Close();
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 执行SqlBulkCopy批量更新(支持对象集合)
+        /// </summary>
+        /// <param name="tables"></param>
+        /// <param name="setList"></param>
+        /// <returns></returns>
+        public static bool BulkCopySet(string tables, params List<object>[] setList)
+        {
+            if (string.IsNullOrEmpty(tables) || setList.Length == 0) return default;
+            var tableNameArr = tables.Split(',');
+            if (tableNameArr.Length != setList.Length) return default;
+            var tableList = new List<DataTable>();
+            for (int i = 0; i < tableNameArr.Length; i++)
+            {
+                var tableName = tableNameArr[i];
+                var table = ObjectToTable(setList[i], tableName);
+                table.PrimaryKey = new DataColumn[] { table.Columns[GetIdName(tableName)] };
+                table.TableName = tableName;
+                tableList.Add(table);
+            }
+
+            var tempTableSuf = DateTime.Now.ToString("yyyyMMddHHmmss");
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                var sqlbulkcopy = new SqlBulkCopy(conn) { BulkCopyTimeout = CommandTimeOut };
+
+                try
+                {
+                    using (SqlCommand cmd = new SqlCommand(string.Empty, conn) { CommandTimeout = CommandTimeOut })
+                    {
+                        tableList.ForEach(o =>
+                        {
+                            var primaryKeyName = o.PrimaryKey.First().ColumnName;
+                            var addOrSetFields = new List<string>();
+                            foreach (DataColumn column in o.Columns) addOrSetFields.Add(column.ColumnName);
+                            cmd.CommandText = string.Format(@"SELECT {0} into {1} from {2} A WHERE 1=2;", string.Join(',', addOrSetFields.Select(p => "A." + p)), tempTablePre + o.TableName + tempTableSuf, o.TableName);
+                            cmd.ExecuteNonQuery();
+
+                            sqlbulkcopy.ColumnMappings.Clear();
+                            sqlbulkcopy.DestinationTableName = tempTablePre + o.TableName + tempTableSuf;
+                            foreach (var item in addOrSetFields) sqlbulkcopy.ColumnMappings.Add(item, item);
+                            sqlbulkcopy.WriteToServer(o);
+
+                            StringBuilder updateSql = new StringBuilder(), onSql = new StringBuilder();
+                            addOrSetFields.Remove(primaryKeyName);
+                            foreach (var column in addOrSetFields) updateSql.Append(string.Format(@"A.{0} = B.{0},", column));
+                            onSql.Append(string.Format(@"A.{0} = B.{0}", primaryKeyName));
+                            cmd.CommandText = string.Format(@"UPDATE A SET {0} FROM {1} A INNER JOIN {2} B ON {3};drop table {2};",
+                                updateSql.ToString().Trim(','), o.TableName, tempTablePre + o.TableName + tempTableSuf, onSql.ToString());
+                            cmd.ExecuteNonQuery();
+                        });
+                    }
+                }
+                catch
+                {
+                    return default;
+                }
+                finally
+                {
+                    sqlbulkcopy.Close();
+                    conn.Close();
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 执行SqlBulkCopy批量更新(支持对象集合)
+        /// </summary>
+        /// <param name="setDic"></param>
+        /// <returns></returns>
+        public static bool BulkCopySet(Dictionary<string, List<object>> setDic)
+        {
+            var setTbList = new List<DataTable>();
+            foreach (var item in setDic)
+            {
+                var tableName = item.Key;
+                var table = ObjectToTable(item.Value, tableName);
+                table.PrimaryKey = new DataColumn[] { table.Columns[GetIdName(tableName)] };
+                table.TableName = tableName;
+                setTbList.Add(table);
+            }
+
+            var tempTableSuf = DateTime.Now.ToString("yyyyMMddHHmmss");
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                var sqlbulkcopy = new SqlBulkCopy(conn) { BulkCopyTimeout = CommandTimeOut };
+
+                try
+                {
+                    using (SqlCommand cmd = new SqlCommand(string.Empty, conn) { CommandTimeout = CommandTimeOut })
+                    {
+                        setTbList.ForEach(o =>
+                        {
+                            var primaryKeyName = o.PrimaryKey.First().ColumnName;
+                            var addOrSetFields = new List<string>();
+                            foreach (DataColumn column in o.Columns) addOrSetFields.Add(column.ColumnName);
+                            cmd.CommandText = string.Format(@"SELECT {0} into {1} from {2} A WHERE 1=2;", string.Join(',', addOrSetFields.Select(p => "A." + p)), tempTablePre + o.TableName + tempTableSuf, o.TableName);
+                            cmd.ExecuteNonQuery();
+
+                            sqlbulkcopy.ColumnMappings.Clear();
+                            sqlbulkcopy.DestinationTableName = tempTablePre + o.TableName + tempTableSuf;
+                            foreach (var item in addOrSetFields) sqlbulkcopy.ColumnMappings.Add(item, item);
+                            sqlbulkcopy.WriteToServer(o);
+
+                            StringBuilder updateSql = new StringBuilder(), onSql = new StringBuilder();
+                            addOrSetFields.Remove(primaryKeyName);
+                            foreach (var column in addOrSetFields) updateSql.Append(string.Format(@"A.{0} = B.{0},", column));
+                            onSql.Append(string.Format(@"A.{0} = B.{0}", primaryKeyName));
+                            cmd.CommandText = string.Format(@"UPDATE A SET {0} FROM {1} A INNER JOIN {2} B ON {3};drop table {2};",
+                                updateSql.ToString().Trim(','), o.TableName, tempTablePre + o.TableName + tempTableSuf, onSql.ToString());
+                            cmd.ExecuteNonQuery();
+                        });
+                    }
+                }
+                catch
+                {
+                    return default;
+                }
+                finally
+                {
+                    sqlbulkcopy.Close();
+                    conn.Close();
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 执行SqlBulkCopy批量新增+更新(支持对象集合)。
+        /// </summary>
+        /// <param name="addDic"></param>
+        /// <param name="setDic"></param>
+        /// <returns></returns>
+        public static bool BulkCopyAddAndSet(Dictionary<string, List<object>> addDic = default, Dictionary<string, List<object>> setDic = default)
+        {
+            if (addDic is null && setDic is null) return false;
+            addDic = addDic ?? new Dictionary<string, List<object>>();
+            setDic = setDic ?? new Dictionary<string, List<object>>();
+            var addTbList = new List<DataTable>();
+            foreach (var item in addDic)
+            {
+                var tableName = item.Key;
+                var table = ObjectToTable(item.Value, tableName);
+                table.TableName = tableName;
+                addTbList.Add(table);
+            }
+
+            var setTbList = new List<DataTable>();
+            foreach (var item in setDic)
+            {
+                var tableName = item.Key;
+                var table = ObjectToTable(item.Value, tableName);
+                table.PrimaryKey = new DataColumn[] { table.Columns[GetIdName(tableName)] };
+                table.TableName = tableName;
+                setTbList.Add(table);
+            }
+
+            var tempTableSuf = DateTime.Now.ToString("yyyyMMddHHmmss");
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                var sqlbulkcopy = new SqlBulkCopy(conn) { BulkCopyTimeout = CommandTimeOut };
+
+                try
+                {
+                    using (SqlCommand cmd = new SqlCommand(string.Empty, conn) { CommandTimeout = CommandTimeOut })
+                    {
+                        addTbList.ForEach(o =>
+                        {
+                            sqlbulkcopy.ColumnMappings.Clear();
+                            sqlbulkcopy.DestinationTableName = o.TableName;
+                            foreach (DataColumn item in o.Columns) sqlbulkcopy.ColumnMappings.Add(item.ColumnName, item.ColumnName);
+                            sqlbulkcopy.WriteToServer(o);
+                        });
+
+                        setTbList.ForEach(o =>
+                        {
+                            var primaryKeyName = o.PrimaryKey.First().ColumnName;
+                            var addOrSetFields = new List<string>();
+                            foreach (DataColumn column in o.Columns) addOrSetFields.Add(column.ColumnName);
+                            cmd.CommandText = string.Format(@"SELECT {0} into {1} from {2} A WHERE 1=2;", string.Join(',', addOrSetFields.Select(p => "A." + p)), tempTablePre + o.TableName + tempTableSuf, o.TableName);
+                            cmd.ExecuteNonQuery();
+
+                            sqlbulkcopy.ColumnMappings.Clear();
+                            sqlbulkcopy.DestinationTableName = tempTablePre + o.TableName + tempTableSuf;
+                            foreach (var item in addOrSetFields) sqlbulkcopy.ColumnMappings.Add(item, item);
+                            sqlbulkcopy.WriteToServer(o);
+
+                            StringBuilder updateSql = new StringBuilder(), onSql = new StringBuilder();
+                            addOrSetFields.Remove(primaryKeyName);
+                            foreach (var column in addOrSetFields) updateSql.Append(string.Format(@"A.{0} = B.{0},", column));
+                            onSql.Append(string.Format(@"A.{0} = B.{0}", primaryKeyName));
+                            cmd.CommandText = string.Format(@"UPDATE A SET {0} FROM {1} A INNER JOIN {2} B ON {3};drop table {2};",
+                                updateSql.ToString().Trim(','), o.TableName, tempTablePre + o.TableName + tempTableSuf, onSql.ToString());
+                            cmd.ExecuteNonQuery();
+                        });
+                    }
+                }
+                catch
+                {
+                    return default;
+                }
+                finally
+                {
+                    sqlbulkcopy.Close();
+                    conn.Close();
+                }
+            }
+            return true;
+        }
+        #endregion
+
+        #region 批量操作(事务)
+        /// <summary>
+        /// 执行SqlBulkCopy批量插入(支持多对象集合)(事务)
+        /// </summary>
+        /// <param name="tables"></param>
+        /// <param name="addList"></param>
+        /// <returns></returns>
+        public static bool BulkCopyAddTran(string tables, params List<object>[] addList)
+        {
+            if (string.IsNullOrEmpty(tables) || addList.Length == 0) return default;
+            var tableNameArr = tables.Split(',');
+            if (tableNameArr.Length != addList.Length) return default;
+            var tableList = new List<DataTable>();
+            for (int i = 0; i < tableNameArr.Length; i++)
+            {
+                var tableName = tableNameArr[i];
+                var table = ObjectToTable(addList[i], tableName);
+                table.TableName = tableName;
+                tableList.Add(table);
+            }
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                var tran = conn.BeginTransaction();//开启事务
+                var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = CommandTimeOut };
+
+                try
+                {
+                    foreach (var item in tableList)
+                    {
+                        sqlbulkcopy.ColumnMappings.Clear();
+                        sqlbulkcopy.DestinationTableName = item.TableName;
+                        for (int i = 0; i < item.Columns.Count; i++)
+                        {
+                            sqlbulkcopy.ColumnMappings.Add(item.Columns[i].ColumnName, item.Columns[i].ColumnName);
+                        }
+                        sqlbulkcopy.WriteToServerAsync(item);
+                    }
+                    tran.Commit();
+                }
+                catch
+                {
+                    return default;
+                }
+                finally
+                {
+                    sqlbulkcopy.Close();
+                    tran.Dispose();
+                    conn.Close();
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 执行SqlBulkCopy批量插入(支持多对象集合)(事务)
+        /// </summary>
+        /// <param name="addDic"></param>
+        /// <returns></returns>
+        public static bool BulkCopyAddTran(Dictionary<string, List<object>> addDic)
+        {
+            var addTbList = new List<DataTable>();
+            foreach (var item in addDic)
+            {
+                var tableName = item.Key;
+                var table = ObjectToTable(item.Value, tableName);
+                table.TableName = tableName;
+                addTbList.Add(table);
+            }
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                var tran = conn.BeginTransaction();//开启事务
+                var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = CommandTimeOut };
+
+                try
+                {
+                    addTbList.ForEach(o =>
+                    {
+                        sqlbulkcopy.ColumnMappings.Clear();
+                        sqlbulkcopy.DestinationTableName = o.TableName;
+                        foreach (DataColumn item in o.Columns) sqlbulkcopy.ColumnMappings.Add(item.ColumnName, item.ColumnName);
+                        sqlbulkcopy.WriteToServer(o);
+                    });
+                    tran.Commit();
+                }
+                catch
+                {
+                    return default;
+                }
+                finally
+                {
+                    sqlbulkcopy.Close();
+                    tran.Dispose();
+                    conn.Close();
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 执行SqlBulkCopy批量更新(支持对象集合)(事务)
+        /// </summary>
+        /// <param name="tables"></param>
+        /// <param name="setList"></param>
+        /// <returns></returns>
+        public static bool BulkCopySetTran(string tables, params List<object>[] setList)
+        {
+            if (string.IsNullOrEmpty(tables) || setList.Length == 0) return default;
+            var tableNameArr = tables.Split(',');
+            if (tableNameArr.Length != setList.Length) return default;
+            var tableList = new List<DataTable>();
+            for (int i = 0; i < tableNameArr.Length; i++)
+            {
+                var tableName = tableNameArr[i];
+                var table = ObjectToTable(setList[i], tableName);
+                table.PrimaryKey = new DataColumn[] { table.Columns[GetIdName(tableName)] };
+                table.TableName = tableName;
+                tableList.Add(table);
+            }
+
+            var tempTableSuf = DateTime.Now.ToString("yyyyMMddHHmmss");
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                var tran = conn.BeginTransaction();//开启事务
+                var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = CommandTimeOut };
+
+                try
+                {
+                    using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = CommandTimeOut })
+                    {
+                        tableList.ForEach(o =>
+                        {
+                            var primaryKeyName = o.PrimaryKey.First().ColumnName;
+                            var addOrSetFields = new List<string>();
+                            foreach (DataColumn column in o.Columns) addOrSetFields.Add(column.ColumnName);
+                            cmd.CommandText = string.Format(@"SELECT {0} into {1} from {2} A WHERE 1=2;", string.Join(',', addOrSetFields.Select(p => "A." + p)), tempTablePre + o.TableName + tempTableSuf, o.TableName);
+                            cmd.ExecuteNonQuery();
+
+                            sqlbulkcopy.ColumnMappings.Clear();
+                            sqlbulkcopy.DestinationTableName = tempTablePre + o.TableName + tempTableSuf;
+                            foreach (var item in addOrSetFields) sqlbulkcopy.ColumnMappings.Add(item, item);
+                            sqlbulkcopy.WriteToServer(o);
+
+                            StringBuilder updateSql = new StringBuilder(), onSql = new StringBuilder();
+                            addOrSetFields.Remove(primaryKeyName);
+                            foreach (var column in addOrSetFields) updateSql.Append(string.Format(@"A.{0} = B.{0},", column));
+                            onSql.Append(string.Format(@"A.{0} = B.{0}", primaryKeyName));
+                            cmd.CommandText = string.Format(@"UPDATE A SET {0} FROM {1} A INNER JOIN {2} B ON {3};drop table {2};",
+                                updateSql.ToString().Trim(','), o.TableName, tempTablePre + o.TableName + tempTableSuf, onSql.ToString());
+                            cmd.ExecuteNonQuery();
+                        });
+
+                        tran.Commit();
+                    }
+                }
+                catch
+                {
+                    return default;
+                }
+                finally
+                {
+                    sqlbulkcopy.Close();
+                    tran.Dispose();
+                    conn.Close();
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 执行SqlBulkCopy批量更新(支持对象集合)(事务)
+        /// </summary>
+        /// <param name="setDic"></param>
+        /// <returns></returns>
+        public static bool BulkCopySetTran(Dictionary<string, List<object>> setDic)
+        {
+            var setTbList = new List<DataTable>();
+            foreach (var item in setDic)
+            {
+                var tableName = item.Key;
+                var table = ObjectToTable(item.Value, tableName);
+                table.PrimaryKey = new DataColumn[] { table.Columns[GetIdName(tableName)] };
+                table.TableName = tableName;
+                setTbList.Add(table);
+            }
+
+            var tempTableSuf = DateTime.Now.ToString("yyyyMMddHHmmss");
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                var tran = conn.BeginTransaction();//开启事务
+                var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = CommandTimeOut };
+
+                try
+                {
+                    using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = CommandTimeOut })
+                    {
+                        setTbList.ForEach(o =>
+                        {
+                            var primaryKeyName = o.PrimaryKey.First().ColumnName;
+                            var addOrSetFields = new List<string>();
+                            foreach (DataColumn column in o.Columns) addOrSetFields.Add(column.ColumnName);
+                            cmd.CommandText = string.Format(@"SELECT {0} into {1} from {2} A WHERE 1=2;", string.Join(',', addOrSetFields.Select(p => "A." + p)), tempTablePre + o.TableName + tempTableSuf, o.TableName);
+                            cmd.ExecuteNonQuery();
+
+                            sqlbulkcopy.ColumnMappings.Clear();
+                            sqlbulkcopy.DestinationTableName = tempTablePre + o.TableName + tempTableSuf;
+                            foreach (var item in addOrSetFields) sqlbulkcopy.ColumnMappings.Add(item, item);
+                            sqlbulkcopy.WriteToServer(o);
+
+                            StringBuilder updateSql = new StringBuilder(), onSql = new StringBuilder();
+                            addOrSetFields.Remove(primaryKeyName);
+                            foreach (var column in addOrSetFields) updateSql.Append(string.Format(@"A.{0} = B.{0},", column));
+                            onSql.Append(string.Format(@"A.{0} = B.{0}", primaryKeyName));
+                            cmd.CommandText = string.Format(@"UPDATE A SET {0} FROM {1} A INNER JOIN {2} B ON {3};drop table {2};",
+                                updateSql.ToString().Trim(','), o.TableName, tempTablePre + o.TableName + tempTableSuf, onSql.ToString());
+                            cmd.ExecuteNonQuery();
+                        });
+
+                        tran.Commit();
+                    }
+                }
+                catch
+                {
+                    return default;
+                }
+                finally
+                {
+                    sqlbulkcopy.Close();
+                    tran.Dispose();
+                    conn.Close();
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 执行SqlBulkCopy批量新增+更新(支持对象集合)(事务)
+        /// </summary>
+        /// <param name="addDic"></param>
+        /// <param name="setDic"></param>
+        /// <returns></returns>
+        public static bool BulkCopyAddAndSetTran(Dictionary<string, List<object>> addDic = default, Dictionary<string, List<object>> setDic = default)
+        {
+            if (addDic is null && setDic is null) return false;
+            addDic = addDic ?? new Dictionary<string, List<object>>();
+            setDic = setDic ?? new Dictionary<string, List<object>>();
+            var addTbList = new List<DataTable>();
+            foreach (var item in addDic)
+            {
+                var tableName = item.Key;
+                var table = ObjectToTable(item.Value, tableName);
+                table.TableName = tableName;
+                addTbList.Add(table);
+            }
+
+            var setTbList = new List<DataTable>();
+            foreach (var item in setDic)
+            {
+                var tableName = item.Key;
+                var table = ObjectToTable(item.Value, tableName);
+                table.PrimaryKey = new DataColumn[] { table.Columns[GetIdName(tableName)] };
+                table.TableName = tableName;
+                setTbList.Add(table);
+            }
+
+            var tempTableSuf = DateTime.Now.ToString("yyyyMMddHHmmss");
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                var tran = conn.BeginTransaction();//开启事务
+                var sqlbulkcopy = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tran) { BulkCopyTimeout = CommandTimeOut };
+
+                try
+                {
+                    using (SqlCommand cmd = new SqlCommand(string.Empty, conn, tran) { CommandTimeout = CommandTimeOut })
+                    {
+                        addTbList.ForEach(o =>
+                        {
+                            sqlbulkcopy.ColumnMappings.Clear();
+                            sqlbulkcopy.DestinationTableName = o.TableName;
+                            foreach (DataColumn item in o.Columns) sqlbulkcopy.ColumnMappings.Add(item.ColumnName, item.ColumnName);
+                            sqlbulkcopy.WriteToServer(o);
+                        });
+
+                        setTbList.ForEach(o =>
+                        {
+                            var primaryKeyName = o.PrimaryKey.First().ColumnName;
+                            var addOrSetFields = new List<string>();
+                            foreach (DataColumn column in o.Columns) addOrSetFields.Add(column.ColumnName);
+                            cmd.CommandText = string.Format(@"SELECT {0} into {1} from {2} A WHERE 1=2;", string.Join(',', addOrSetFields.Select(p => "A." + p)), tempTablePre + o.TableName + tempTableSuf, o.TableName);
+                            cmd.ExecuteNonQuery();
+
+                            sqlbulkcopy.ColumnMappings.Clear();
+                            sqlbulkcopy.DestinationTableName = tempTablePre + o.TableName + tempTableSuf;
+                            foreach (var item in addOrSetFields) sqlbulkcopy.ColumnMappings.Add(item, item);
+                            sqlbulkcopy.WriteToServer(o);
+
+                            StringBuilder updateSql = new StringBuilder(), onSql = new StringBuilder();
+                            addOrSetFields.Remove(primaryKeyName);
+                            foreach (var column in addOrSetFields) updateSql.Append(string.Format(@"A.{0} = B.{0},", column));
+                            onSql.Append(string.Format(@"A.{0} = B.{0}", primaryKeyName));
+                            cmd.CommandText = string.Format(@"UPDATE A SET {0} FROM {1} A INNER JOIN {2} B ON {3};drop table {2};",
+                                updateSql.ToString().Trim(','), o.TableName, tempTablePre + o.TableName + tempTableSuf, onSql.ToString());
+                            cmd.ExecuteNonQuery();
+                        });
+
+                        tran.Commit();
+                    }
+                }
+                catch
+                {
+                    return default;
+                }
+                finally
+                {
+                    sqlbulkcopy.Close();
+                    tran.Dispose();
+                    conn.Close();
+                }
+            }
+            return true;
+        }
+        #endregion
 
         #region ExecuteNonQuery
         /// <summary>
@@ -1495,21 +2140,29 @@ namespace CommonLibrary
         /// </summary>
         /// <param name="connectionString">数据库连接字符串</param>
         /// <param name="table">数据表</param>
-        public static void BulkInsert(string connectionString, DataTable table)
+        public static bool BulkInsert(string connectionString, DataTable table)
         {
             if (string.IsNullOrEmpty(table.TableName)) throw new Exception("DataTable.TableName属性不能为空");
-            using (SqlBulkCopy bulk = new SqlBulkCopy(connectionString))
+            try
             {
-                bulk.BatchSize = BatchSize;
-                bulk.BulkCopyTimeout = CommandTimeOut;
-                bulk.DestinationTableName = table.TableName;
-                foreach (DataColumn col in table.Columns)
+                using (SqlBulkCopy bulk = new SqlBulkCopy(connectionString))
                 {
-                    bulk.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+                    bulk.BatchSize = BatchSize;
+                    bulk.BulkCopyTimeout = CommandTimeOut;
+                    bulk.DestinationTableName = table.TableName;
+                    foreach (DataColumn col in table.Columns)
+                    {
+                        bulk.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+                    }
+                    bulk.WriteToServer(table);
+                    bulk.Close();
                 }
-                bulk.WriteToServer(table);
-                bulk.Close();
             }
+            catch
+            {
+                return default;
+            }
+            return true;
         }
 
         /// <summary>
@@ -1517,44 +2170,39 @@ namespace CommonLibrary
         /// </summary>
         /// <param name="connectionString">数据库连接字符串</param>
         /// <param name="table">数据表</param>
-        public static void BatchUpdate(string connectionString, DataTable table)
+        public static bool BatchUpdate(string connectionString, DataTable table)
         {
-            SqlConnection connection = new SqlConnection(connectionString);
-
-            SqlCommand command = connection.CreateCommand();
-            command.CommandTimeout = CommandTimeOut;
-            command.CommandType = CommandType.Text;
-            SqlDataAdapter adapter = new SqlDataAdapter(command);
-            SqlCommandBuilder commandBulider = new SqlCommandBuilder(adapter);
-            commandBulider.ConflictOption = ConflictOption.OverwriteChanges;
-
-            SqlTransaction transaction = null;
-            try
+            using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                connection.Open();
-                transaction = connection.BeginTransaction();
-                //设置批量更新的每次处理条数
-                adapter.UpdateBatchSize = BatchSize;
-                //设置事物
-                adapter.SelectCommand.Transaction = transaction;
-
-                if (table.ExtendedProperties["SQL"] != null)
+                conn.Open();
+                var tran = conn.BeginTransaction();//开启事务
+                try
                 {
-                    adapter.SelectCommand.CommandText = table.ExtendedProperties["SQL"].ToString();
+                    var command = new SqlCommand(string.Empty, conn) { CommandTimeout = CommandTimeOut, CommandType = CommandType.Text };
+                    var adapter = new SqlDataAdapter(command);
+                    var commandBulider = new SqlCommandBuilder(adapter);
+                    commandBulider.ConflictOption = ConflictOption.OverwriteChanges;
+
+                    //设置批量更新的每次处理条数
+                    adapter.UpdateBatchSize = BatchSize;
+                    //设置事物
+                    adapter.SelectCommand.Transaction = tran;
+
+                    if (!string.IsNullOrEmpty(Convert.ToString(table.ExtendedProperties["SQL"]))) adapter.SelectCommand.CommandText = table.ExtendedProperties["SQL"].ToString();
+                    adapter.Update(table);
+                    tran.Commit();
                 }
-                adapter.Update(table);
-                transaction.Commit();
+                catch
+                {
+                    return default;
+                }
+                finally
+                {
+                    tran.Dispose();
+                    conn.Close();
+                }
             }
-            catch (SqlException ex)
-            {
-                if (transaction != null) transaction.Rollback();
-                throw ex;
-            }
-            finally
-            {
-                connection.Close();
-                connection.Dispose();
-            }
+            return true;
         }
 
         /// <summary>
@@ -1564,17 +2212,24 @@ namespace CommonLibrary
         /// <param name="sql">SQL语句</param>
         /// <param name="batchSize">每批次更新记录行数</param>
         /// <param name="interval">批次执行间隔(秒)</param>
-        public static void BatchDelete(string connectionString, string sql, int batchSize = 1000, int interval = 1)
+        public static bool BatchDelete(string connectionString, string sql, int batchSize = 1000, int interval = 1)
         {
-            sql = sql.ToLower();
-
-            if (batchSize < 1000) batchSize = 1000;
-            if (interval < 1) interval = 1;
-            while (GetField(connectionString, sql.Replace("delete", "select top 1 1")) != null)
+            try
             {
-                ExecuteNonQuery(connectionString, CommandType.Text, sql.Replace("delete", string.Format("delete top ({0})", batchSize)));
-                System.Threading.Thread.Sleep(interval * 1000);
+                sql = sql.ToLower();
+                if (batchSize < 1000) batchSize = 1000;
+                if (interval < 1) interval = 1;
+                while (GetField(connectionString, sql.Replace("delete", "select top 1 1")) != null)
+                {
+                    ExecuteNonQuery(connectionString, CommandType.Text, sql.Replace("delete", string.Format("delete top ({0})", batchSize)));
+                    Thread.Sleep(interval * 1000);
+                }
             }
+            catch
+            {
+                return default;
+            }
+            return true;
         }
 
         /// <summary>
@@ -1584,18 +2239,26 @@ namespace CommonLibrary
         /// <param name="sql">SQL语句</param>
         /// <param name="batchSize">每批次更新记录行数</param>
         /// <param name="interval">批次执行间隔(秒)</param>
-        public static void BatchUpdate(string connectionString, string sql, int batchSize = 1000, int interval = 1)
+        public static bool BatchUpdate(string connectionString, string sql, int batchSize = 1000, int interval = 1)
         {
-            if (batchSize < 1000) batchSize = 1000;
-            if (interval < 1) interval = 1;
-            string existsSql = Regex.Replace(sql, @"[\w\s.=,']*from", "select top 1 1 from", RegexOptions.IgnoreCase);
-            existsSql = Regex.Replace(existsSql, @"set[\w\s.=,']* where", "where", RegexOptions.IgnoreCase);
-            existsSql = Regex.Replace(existsSql, @"update", "select top 1 1 from", RegexOptions.IgnoreCase);
-            while (GetField<int>(connectionString, existsSql) != 0)
+            try
             {
-                ExecuteNonQuery(connectionString, CommandType.Text, Regex.Replace(sql, "update", string.Format("update top ({0})", batchSize), RegexOptions.IgnoreCase));
-                System.Threading.Thread.Sleep(interval * 1000);
+                if (batchSize < 1000) batchSize = 1000;
+                if (interval < 1) interval = 1;
+                string existsSql = Regex.Replace(sql, @"[\w\s.=,']*from", "select top 1 1 from", RegexOptions.IgnoreCase);
+                existsSql = Regex.Replace(existsSql, @"set[\w\s.=,']* where", "where", RegexOptions.IgnoreCase);
+                existsSql = Regex.Replace(existsSql, @"update", "select top 1 1 from", RegexOptions.IgnoreCase);
+                while (GetField<int>(connectionString, existsSql) != 0)
+                {
+                    ExecuteNonQuery(connectionString, CommandType.Text, Regex.Replace(sql, "update", string.Format("update top ({0})", batchSize), RegexOptions.IgnoreCase));
+                    System.Threading.Thread.Sleep(interval * 1000);
+                }
             }
+            catch
+            {
+                return default;
+            }
+            return true;
         }
 
         #endregion 批量操作
@@ -1651,11 +2314,24 @@ namespace CommonLibrary
         /// </summary>
         /// <param name="tableName"></param>
         /// <returns></returns>
-        private static string GetIdName(string tableName, PropertyInfo[] addProperties)
+        private static string GetIdName(string tableName, PropertyInfo[] addProperties = default)
         {
+            var defaultIdName = addProperties == default ? "Id" : (addProperties.FirstOrDefault(o => o.Name.ToLower().Contains("id"))?.Name ?? "Id");
+            var fields = GetFields(tableName);
+            return fields.Any(o => o.Identity == 1) ? fields.FirstOrDefault(o => o.Identity == 1).Name : defaultIdName;
+        }
+
+        /// <summary>
+        /// 根据表名获取表字段明细列表
+        /// </summary>
+        /// <param name="tableName"></param>
+        /// <returns></returns>
+        private static List<SysColumn> GetFields(string tableName)
+        {
+            if (string.IsNullOrEmpty(tableName)) return default;
             if (!tableDic.ContainsKey(tableName))
-                tableDic.TryAdd(tableName, MSTest.SqlBulkCopyHelper.GetTableColumns(tableName));
-            return tableDic[tableName].Any(o => o.Identity == 1) ? tableDic[tableName].First(o => o.Identity == 1).Name : addProperties.FirstOrDefault(o => o.Name.ToLower().Contains("id"))?.Name ?? "Id";
+                tableDic.TryAdd(tableName, GetTableColumns(tableName));
+            return tableDic[tableName];
         }
 
         /// <summary>
@@ -1703,7 +2379,7 @@ namespace CommonLibrary
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
-        public static DataTable ObjectToTable(object obj, PropertyInfo[] addProperties)
+        public static DataTable ObjectToTable(object obj, string tableName = default)
         {
             try
             {
@@ -1723,11 +2399,21 @@ namespace CommonLibrary
                     IEnumerable<object> lstenum = obj as IEnumerable<object>;
                     if (lstenum.Count() > 0)
                     {
-                        var columnDic = ObjToDic(lstenum.First());
+                        var firstObj = lstenum.First();
+                        Type addType = firstObj.GetType();
+                        //var addProperties = addType.GetProperties();
+
+                        if (string.IsNullOrEmpty(tableName))
+                            tableName = addType.Name;
+
+                        var columnDic = ObjToDic(firstObj);
+                        //var idName = GetIdName(tableName, addProperties);
                         foreach (var item in columnDic)
                         {
-                            var dataType = addProperties.FirstOrDefault(o => o.Name == item.Key).PropertyType;
-                            if (dataType.IsGenericType && dataType.GetGenericTypeDefinition() == typeof(Nullable<>)) dataType = dataType.GetGenericArguments()[0];
+
+                            var dataType = SqlTypeString2CsharpType(GetFields(tableName).FirstOrDefault(o => o.Name == item.Key).Type);
+                            //var dataType = addProperties.FirstOrDefault(o => o.Name == item.Key).PropertyType;
+                            //if (dataType.IsGenericType && dataType.GetGenericTypeDefinition() == typeof(Nullable<>)) dataType = dataType.GetGenericArguments()[0];
                             dt.Columns.Add(new DataColumn() { ColumnName = item.Key, DataType = dataType });//SqlBulkCopyHelper.SqlTypeString2CsharpType(tableDic[tableName].First(o => o.Name == item.Key).Type
                         }
                         //数据
@@ -1797,6 +2483,238 @@ namespace CommonLibrary
             return Convert.ChangeType(obj, conversionType, provider);
         }
         #endregion
+
+        /// <summary>
+        /// 返回指定可以为null的类型的基础类型参数
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        public static Type GetUnderlyingType(Type type)
+        {
+            return Nullable.GetUnderlyingType(type) ?? type;
+        }
+
+        /// <summary>
+        /// sql server中的数据类型，转换为C#中的类型类型
+        /// </summary>
+        /// <param name="sqlTypeString"></param>
+        /// <returns></returns>
+        public static Type SqlTypeString2CsharpType(string sqlTypeString)
+        {
+            SqlDbType dbTpe = SqlTypeToSqlDbType(sqlTypeString);
+            return SqlType2CsharpType(dbTpe);
+        }
+
+        /// <summary>
+        /// 将sql server中的数据类型，转化为C#中的类型的字符串
+        /// </summary>
+        /// <param name="sqlTypeString"></param>
+        /// <returns></returns>
+        public static string SqlTypeString2CsharpTypeString(string sqlTypeString)
+        {
+            Type type = SqlTypeString2CsharpType(sqlTypeString);
+            return type.Name;
+        }
+
+        /// <summary>
+        /// SqlDbType转换为C#数据类型
+        /// </summary>
+        /// <param name="sqlType"></param>
+        /// <returns></returns>
+        public static Type SqlType2CsharpType(SqlDbType sqlType)
+        {
+            switch (sqlType)
+            {
+                case SqlDbType.BigInt:
+                    return typeof(Int64);
+                case SqlDbType.Binary:
+                    return typeof(Object);
+                case SqlDbType.Bit:
+                    return typeof(Boolean);
+                case SqlDbType.Char:
+                    return typeof(String);
+                case SqlDbType.DateTime:
+                    return typeof(DateTime);
+                case SqlDbType.Decimal:
+                    return typeof(Decimal);
+                case SqlDbType.Float:
+                    return typeof(Double);
+                case SqlDbType.Image:
+                    return typeof(Object);
+                case SqlDbType.Int:
+                    return typeof(Int32);
+                case SqlDbType.Money:
+                    return typeof(Decimal);
+                case SqlDbType.NChar:
+                    return typeof(String);
+                case SqlDbType.NText:
+                    return typeof(String);
+                case SqlDbType.NVarChar:
+                    return typeof(String);
+                case SqlDbType.Real:
+                    return typeof(Single);
+                case SqlDbType.SmallDateTime:
+                    return typeof(DateTime);
+                case SqlDbType.SmallInt:
+                    return typeof(Int16);
+                case SqlDbType.SmallMoney:
+                    return typeof(Decimal);
+                case SqlDbType.Text:
+                    return typeof(String);
+                case SqlDbType.Timestamp:
+                    return typeof(Object);
+                case SqlDbType.TinyInt:
+                    return typeof(Byte);
+                case SqlDbType.Udt://自定义的数据类型
+                    return typeof(Object);
+                case SqlDbType.UniqueIdentifier:
+                    return typeof(Object);
+                case SqlDbType.VarBinary:
+                    return typeof(Object);
+                case SqlDbType.VarChar:
+                    return typeof(String);
+                case SqlDbType.Variant:
+                    return typeof(Object);
+                case SqlDbType.Xml:
+                    return typeof(Object);
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// sql server数据类型（如：varchar）转换为SqlDbType类型
+        /// </summary>
+        /// <param name="sqlTypeString"></param>
+        /// <returns></returns>
+        public static SqlDbType SqlTypeToSqlDbType(string sqlTypeString)
+        {
+            SqlDbType dbType = SqlDbType.Variant;//默认为Object
+
+            switch (sqlTypeString)
+            {
+                case "int":
+                    dbType = SqlDbType.Int;
+                    break;
+                case "varchar":
+                    dbType = SqlDbType.VarChar;
+                    break;
+                case "bit":
+                    dbType = SqlDbType.Bit;
+                    break;
+                case "datetime":
+                    dbType = SqlDbType.DateTime;
+                    break;
+                case "decimal":
+                    dbType = SqlDbType.Decimal;
+                    break;
+                case "float":
+                    dbType = SqlDbType.Float;
+                    break;
+                case "image":
+                    dbType = SqlDbType.Image;
+                    break;
+                case "money":
+                    dbType = SqlDbType.Money;
+                    break;
+                case "ntext":
+                    dbType = SqlDbType.NText;
+                    break;
+                case "nvarchar":
+                    dbType = SqlDbType.NVarChar;
+                    break;
+                case "smalldatetime":
+                    dbType = SqlDbType.SmallDateTime;
+                    break;
+                case "smallint":
+                    dbType = SqlDbType.SmallInt;
+                    break;
+                case "text":
+                    dbType = SqlDbType.Text;
+                    break;
+                case "bigint":
+                    dbType = SqlDbType.BigInt;
+                    break;
+                case "binary":
+                    dbType = SqlDbType.Binary;
+                    break;
+                case "char":
+                    dbType = SqlDbType.Char;
+                    break;
+                case "nchar":
+                    dbType = SqlDbType.NChar;
+                    break;
+                case "numeric":
+                    dbType = SqlDbType.Decimal;
+                    break;
+                case "real":
+                    dbType = SqlDbType.Real;
+                    break;
+                case "smallmoney":
+                    dbType = SqlDbType.SmallMoney;
+                    break;
+                case "sql_variant":
+                    dbType = SqlDbType.Variant;
+                    break;
+                case "timestamp":
+                    dbType = SqlDbType.Timestamp;
+                    break;
+                case "tinyint":
+                    dbType = SqlDbType.TinyInt;
+                    break;
+                case "uniqueidentifier":
+                    dbType = SqlDbType.UniqueIdentifier;
+                    break;
+                case "varbinary":
+                    dbType = SqlDbType.VarBinary;
+                    break;
+                case "xml":
+                    dbType = SqlDbType.Xml;
+                    break;
+            }
+            return dbType;
+        }
+
+        /// <summary>
+        /// 获取数据库表的所有列
+        /// </summary>
+        /// <param name="tableName"></param>
+        /// <returns></returns>
+        public static List<SysColumn> GetTableColumns(string tableName)
+        {
+            string sql = string.Format($@"SELECT A.name,
+                       A.colorder,
+                       C.DATA_TYPE,
+                       A.isnullable,
+                       COLUMNPROPERTY(OBJECT_ID('{tableName}'), A.name, 'IsIdentity') IsIdentity,
+                       SUBSTRING(D.text, 3, LEN(D.text) - 4) DefaultValue
+                FROM syscolumns A
+                    INNER JOIN sysobjects B
+                        ON A.id = B.id
+                    LEFT JOIN dbo.syscomments D
+                        ON A.cdefault = D.id
+                    INNER JOIN INFORMATION_SCHEMA.COLUMNS C
+                        ON B.name = C.TABLE_NAME
+                           AND C.COLUMN_NAME = A.name
+                WHERE B.xtype = 'U'
+                      AND B.name = '{tableName}'
+                ORDER BY A.colid ASC");
+
+            var columns = new List<SysColumn>();
+            DataTable dt = SqlCoreHelper.ExecuteDataSetText(sql, null).Tables[0];
+            foreach (DataRow reader in dt.Rows)
+            {
+                SysColumn column = new SysColumn();
+                column.Name = reader[0].ToString();
+                column.ColOrder = Convert.ToInt16(reader[1]);
+                column.Type = reader[2].ToString();
+                column.IsNull = Convert.ToInt16(reader[3]);
+                column.Default = reader[5].ToString();
+                column.Identity = Convert.ToInt16(reader[4]);
+                columns.Add(column);
+            }
+            return columns;
+        }
         #endregion
     }
 }
